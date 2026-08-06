@@ -1,0 +1,109 @@
+@import "tailwindcss";
+
+/*
+  Design system: EduVision School palette.
+  Source of truth: z_School_ERP_UI_Color_Palette.md (project docs).
+  Do not add ad-hoc hex values in components — extend these tokens instead,
+  and update that doc + this file together if a new need arises.
+*/
+:root {
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-light: #dbeafe;
+  --secondary: #1e3a8a;
+
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --info: #0ea5e9;
+  --purple: #8b5cf6;
+
+  --background: #f8fafc;
+  --surface: #ffffff;
+  --section: #f1f5f9;
+  --border: #e2e8f0;
+  --divider: #cbd5e1;
+
+  --heading: #0f172a;
+  --text: #334155;
+  --muted: #64748b;
+  --muted-text: #94a3b8;
+  --disabled: #cbd5e1;
+
+  --status-active-bg: #dcfce7;
+  --status-active-text: #15803d;
+  --status-pending-bg: #fef3c7;
+  --status-pending-text: #b45309;
+  --status-inactive-bg: #fee2e2;
+  --status-inactive-text: #b91c1c;
+  --status-draft-bg: #e0e7ff;
+  --status-draft-text: #4338ca;
+
+  --foreground: var(--text);
+}
+
+@theme inline {
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-light: var(--primary-light);
+  --color-secondary: var(--secondary);
+
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-info: var(--info);
+  --color-purple: var(--purple);
+
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-section: var(--section);
+  --color-border: var(--border);
+  --color-divider: var(--divider);
+
+  --color-heading: var(--heading);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-muted-text: var(--muted-text);
+  --color-disabled: var(--disabled);
+
+  --color-status-active-bg: var(--status-active-bg);
+  --color-status-active-text: var(--status-active-text);
+  --color-status-pending-bg: var(--status-pending-bg);
+  --color-status-pending-text: var(--status-pending-text);
+  --color-status-inactive-bg: var(--status-inactive-bg);
+  --color-status-inactive-text: var(--status-inactive-text);
+  --color-status-draft-bg: var(--status-draft-bg);
+  --color-status-draft-text: var(--status-draft-text);
+
+  --color-foreground: var(--foreground);
+
+  --font-display: var(--font-poppins);
+  --font-sans: var(--font-inter);
+
+  --radius-card: 12px;
+  --radius-control: 8px;
+  --radius-pill: 9999px;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display), var(--font-sans), sans-serif;
+}
+
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
