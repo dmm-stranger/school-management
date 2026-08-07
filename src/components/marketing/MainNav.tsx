@@ -3,21 +3,62 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { ChevronDown, Menu, X, ArrowRight } from "lucide-react";
-import { LOGO_SVG_PATH } from "@/config/demo-data";
+import { LOGO_SVG_PATH, ABOUT_NAV_ITEMS } from "@/config/demo-data";
 
-const NAV_LINKS: { label: string; href: string; dropdown?: string[] }[] = [
+const NAV_LINKS: { label: string; href: string; dropdown?: { label: string; href: string }[] }[] = [
   { label: "Home", href: "/" },
-  { label: "About Us", href: "/about", dropdown: ["Our Story", "Mission & Vision", "Faculty"] },
-  { label: "Academics", href: "/academics", dropdown: ["Curriculum", "Primary School", "Middle School", "High School"] },
-  { label: "Admissions", href: "/admissions", dropdown: ["How to Apply", "Fees & Scholarships", "FAQs"] },
-  { label: "Campus Life", href: "/campus-life", dropdown: ["Sports", "Library", "Events"] },
-  { label: "News & Events", href: "/news", dropdown: ["Latest News", "Upcoming Events"] },
+  {
+    label: "About Us",
+    href: "/about",
+    dropdown: ABOUT_NAV_ITEMS.map((item) => ({ label: item.label, href: item.href })),
+  },
+  {
+    label: "Academics",
+    href: "/academics",
+    dropdown: [
+      { label: "Curriculum", href: "/academics" },
+      { label: "Primary School", href: "/academics" },
+      { label: "Middle School", href: "/academics" },
+      { label: "High School", href: "/academics" },
+    ],
+  },
+  {
+    label: "Admissions",
+    href: "/admissions",
+    dropdown: [
+      { label: "How to Apply", href: "/admissions" },
+      { label: "Fees & Scholarships", href: "/admissions" },
+      { label: "FAQs", href: "/admissions" },
+    ],
+  },
+  {
+    label: "Campus Life",
+    href: "/campus-life",
+    dropdown: [
+      { label: "Sports", href: "/campus-life" },
+      { label: "Library", href: "/campus-life" },
+      { label: "Events", href: "/campus-life" },
+    ],
+  },
+  {
+    label: "News & Events",
+    href: "/news",
+    dropdown: [
+      { label: "Latest News", href: "/news" },
+      { label: "Upcoming Events", href: "/news" },
+    ],
+  },
   { label: "Contact Us", href: "/contact" },
 ];
 
 export function MainNav() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const pathname = usePathname();
+
+  const isLinkActive = (href: string) =>
+    href === "/" ? pathname === "/" : pathname.startsWith(href);
 
   return (
     <div className="bg-surface border-b border-border">
@@ -35,47 +76,48 @@ export function MainNav() {
         </Link>
 
         <nav className="hidden lg:flex items-center gap-7">
-          {NAV_LINKS.map((link) => (
-            <div key={link.label} className="group relative">
-              <Link
-                href={link.href}
-                className={`flex items-center gap-1 text-sm font-medium py-2 ${
-                  link.label === "Home"
-                    ? "text-primary"
-                    : "text-text hover:text-primary"
-                } transition-colors`}
-              >
-                {link.label}
-                {link.dropdown && (
-                  <ChevronDown
-                    size={14}
-                    className="transition-transform group-hover:rotate-180"
-                    aria-hidden="true"
-                  />
+          {NAV_LINKS.map((link) => {
+            const active = isLinkActive(link.href);
+            return (
+              <div key={link.label} className="group relative">
+                <Link
+                  href={link.href}
+                  className={`flex items-center gap-1 text-sm font-medium py-2 ${
+                    active ? "text-primary" : "text-text hover:text-primary"
+                  } transition-colors`}
+                >
+                  {link.label}
+                  {link.dropdown && (
+                    <ChevronDown
+                      size={14}
+                      className="transition-transform group-hover:rotate-180"
+                      aria-hidden="true"
+                    />
+                  )}
+                </Link>
+                {active && (
+                  <span className="absolute -bottom-[1px] left-0 right-0 h-0.5 bg-primary rounded-full" />
                 )}
-              </Link>
-              {link.label === "Home" && (
-                <span className="absolute -bottom-[1px] left-0 right-0 h-0.5 bg-primary rounded-full" />
-              )}
 
-              {link.dropdown && (
-                <div className="absolute left-0 top-full hidden group-hover:block pt-2 z-40">
-                  <ul className="min-w-48 rounded-card border border-border bg-surface shadow-md py-2">
-                    {link.dropdown.map((item) => (
-                      <li key={item}>
-                        <Link
-                          href="#"
-                          className="block px-4 py-2 text-sm text-text hover:bg-section hover:text-primary"
-                        >
-                          {item}
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          ))}
+                {link.dropdown && (
+                  <div className="absolute left-0 top-full hidden group-hover:block pt-2 z-40">
+                    <ul className="min-w-52 rounded-card border border-border bg-surface shadow-md py-2">
+                      {link.dropdown.map((item) => (
+                        <li key={item.label}>
+                          <Link
+                            href={item.href}
+                            className="block px-4 py-2 text-sm text-text hover:bg-section hover:text-primary"
+                          >
+                            {item.label}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </nav>
 
         <div className="hidden lg:block">
@@ -108,7 +150,7 @@ export function MainNav() {
                   href={link.href}
                   onClick={() => setMobileOpen(false)}
                   className={`block rounded-control px-3 py-2.5 text-sm font-medium ${
-                    link.label === "Home"
+                    isLinkActive(link.href)
                       ? "bg-primary-light text-primary"
                       : "text-text hover:bg-section"
                   }`}

@@ -3,8 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ChevronRight, Mail, Phone } from "lucide-react";
+import { Mail, Phone } from "lucide-react";
 import { DonutChart } from "@/components/ui/DonutChart";
+import { Breadcrumb } from "@/components/ui/Breadcrumb";
 import { SAMPLE_STUDENT, STUDENT_TABS } from "@/config/demo-data";
 import { TONE_HEX } from "@/lib/utils/tone";
 
@@ -26,13 +27,13 @@ export function StudentProfile() {
 
   return (
     <div className="max-w-6xl">
-      <nav className="flex items-center gap-1.5 text-sm text-muted mb-4">
-        <Link href="/dashboard/students" className="hover:text-primary">
-          Students
-        </Link>
-        <ChevronRight size={14} aria-hidden="true" />
-        <span className="text-heading">Student Profile</span>
-      </nav>
+      <Breadcrumb
+        items={[
+          { label: "Students", href: "/dashboard/students" },
+          { label: "Student Profile" },
+        ]}
+        className="mb-4"
+      />
 
       <div className="rounded-card border border-border bg-surface p-5 shadow-sm flex flex-wrap items-start justify-between gap-4 mb-6">
         <div className="flex items-center gap-4">
