@@ -1,36 +1,62 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# School ERP — Frontend
+
+Next.js (App Router) + TypeScript + Tailwind CSS 4 frontend for the School ERP system.
+Consumes the separate `school-erp-backend` Express/MongoDB API.
+
+## Phase Status
+
+- [x] Phase 0 — Project Foundation (design tokens, folder structure, API client)
+- [ ] Phase 1 — Authentication UI
+- [ ] Phase 2+ — see `docs/PROGRESS-LOG.md` in the backend repo
+
+## Tech Stack
+
+- Next.js 16 (App Router)
+- TypeScript
+- Tailwind CSS 4
+- Design tokens from `Color_pallte.md` (wired into `src/app/globals.css`)
+- Poppins (headings) + Inter (body) via `next/font/google`
 
 ## Getting Started
 
-First, run the development server:
+1. Install dependencies:
+   ```bash
+   yarn install
+   ```
+2. Copy environment variables:
+   ```bash
+   cp .env.local.example .env.local
+   ```
+3. Run the dev server (make sure the backend is running on port 5000):
+   ```bash
+   yarn dev
+   ```
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Folder Structure
+
+```
+src/
+├── app/            # Next.js routes (App Router)
+├── components/
+│   ├── ui/         # Reusable primitives (buttons, inputs, cards...)
+│   └── layout/     # Shells: sidebar, header, dashboard layout per role
+├── features/       # Feature/module folders (student, teacher, attendance...)
+├── lib/            # api-client.ts and other shared libs
+├── hooks/          # Shared React hooks
+├── store/          # State management (added when needed)
+├── types/          # Shared TypeScript types
+└── config/         # App-level config
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Design Tokens
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+All colors, fonts, and radii from `Color_pallte.md` are defined as CSS
+variables in `src/app/globals.css` and exposed as Tailwind utilities
+(e.g. `bg-primary`, `text-heading`, `rounded-[var(--radius-card)]`).
+Dark mode palette is included under the `.dark` class.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## API Connection
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+`src/lib/api-client.ts` wraps `fetch` with credentials, base URL
+(`NEXT_PUBLIC_API_URL`), and typed responses matching the backend's
+`ApiResponse` shape (`{ success, message, data }`).

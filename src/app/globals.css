@@ -1,83 +1,94 @@
 @import "tailwindcss";
 
-/*
-  Design system: EduVision School palette.
-  Source of truth: z_School_ERP_UI_Color_Palette.md (project docs).
-  Do not add ad-hoc hex values in components — extend these tokens instead,
-  and update that doc + this file together if a new need arises.
-*/
 :root {
-  --primary: #2563eb;
-  --primary-hover: #1d4ed8;
-  --primary-light: #dbeafe;
-  --secondary: #1e3a8a;
+  /* Primary */
+  --color-primary: #2563EB;
+  --color-primary-hover: #1D4ED8;
+  --color-primary-light: #DBEAFE;
+  --color-secondary: #1E3A8A;
 
-  --success: #10b981;
-  --warning: #f59e0b;
-  --danger: #ef4444;
-  --info: #0ea5e9;
-  --purple: #8b5cf6;
+  /* Accent */
+  --color-success: #10B981;
+  --color-warning: #F59E0B;
+  --color-danger: #EF4444;
+  --color-info: #0EA5E9;
+  --color-purple: #8B5CF6;
 
-  --background: #f8fafc;
-  --surface: #ffffff;
-  --section: #f1f5f9;
-  --border: #e2e8f0;
-  --divider: #cbd5e1;
+  /* Neutrals */
+  --color-background: #F8FAFC;
+  --color-surface: #FFFFFF;
+  --color-surface-alt: #F1F5F9;
+  --color-border: #E2E8F0;
+  --color-divider: #CBD5E1;
 
-  --heading: #0f172a;
-  --text: #334155;
-  --muted: #64748b;
-  --muted-text: #94a3b8;
-  --disabled: #cbd5e1;
+  /* Typography */
+  --color-heading: #0F172A;
+  --color-text: #334155;
+  --color-muted: #64748B;
+  --color-muted-2: #94A3B8;
+  --color-disabled: #CBD5E1;
 
-  --status-active-bg: #dcfce7;
-  --status-active-text: #15803d;
-  --status-pending-bg: #fef3c7;
-  --status-pending-text: #b45309;
-  --status-inactive-bg: #fee2e2;
-  --status-inactive-text: #b91c1c;
-  --status-draft-bg: #e0e7ff;
-  --status-draft-text: #4338ca;
+  /* Dashboard chart colors */
+  --color-chart-students: #2563EB;
+  --color-chart-teachers: #10B981;
+  --color-chart-attendance: #F59E0B;
+  --color-chart-fees: #8B5CF6;
+  --color-chart-events: #EC4899;
+  --color-chart-library: #06B6D4;
 
-  --foreground: var(--text);
+  /* Status colors (bg / text pairs) */
+  --color-status-active-bg: #DCFCE7;
+  --color-status-active-text: #15803D;
+  --color-status-pending-bg: #FEF3C7;
+  --color-status-pending-text: #B45309;
+  --color-status-inactive-bg: #FEE2E2;
+  --color-status-inactive-text: #B91C1C;
+  --color-status-draft-bg: #E0E7FF;
+  --color-status-draft-text: #4338CA;
+}
+
+.dark {
+  --color-background: #0F172A;
+  --color-surface: #1F2937;
+  --color-surface-alt: #1E293B;
+  --color-border: #334155;
+  --color-heading: #F8FAFC;
+  --color-text: #CBD5E1;
+  --color-muted: #94A3B8;
 }
 
 @theme inline {
-  --color-primary: var(--primary);
-  --color-primary-hover: var(--primary-hover);
-  --color-primary-light: var(--primary-light);
-  --color-secondary: var(--secondary);
+  --color-primary: var(--color-primary);
+  --color-primary-hover: var(--color-primary-hover);
+  --color-primary-light: var(--color-primary-light);
+  --color-secondary: var(--color-secondary);
 
-  --color-success: var(--success);
-  --color-warning: var(--warning);
-  --color-danger: var(--danger);
-  --color-info: var(--info);
-  --color-purple: var(--purple);
+  --color-success: var(--color-success);
+  --color-warning: var(--color-warning);
+  --color-danger: var(--color-danger);
+  --color-info: var(--color-info);
+  --color-purple: var(--color-purple);
 
-  --color-background: var(--background);
-  --color-surface: var(--surface);
-  --color-section: var(--section);
-  --color-border: var(--border);
-  --color-divider: var(--divider);
+  --color-background: var(--color-background);
+  --color-surface: var(--color-surface);
+  --color-surface-alt: var(--color-surface-alt);
+  --color-border: var(--color-border);
+  --color-divider: var(--color-divider);
 
-  --color-heading: var(--heading);
-  --color-text: var(--text);
-  --color-muted: var(--muted);
-  --color-muted-text: var(--muted-text);
-  --color-disabled: var(--disabled);
+  --color-heading: var(--color-heading);
+  --color-text: var(--color-text);
+  --color-muted: var(--color-muted);
+  --color-muted-2: var(--color-muted-2);
+  --color-disabled: var(--color-disabled);
 
-  --color-status-active-bg: var(--status-active-bg);
-  --color-status-active-text: var(--status-active-text);
-  --color-status-pending-bg: var(--status-pending-bg);
-  --color-status-pending-text: var(--status-pending-text);
-  --color-status-inactive-bg: var(--status-inactive-bg);
-  --color-status-inactive-text: var(--status-inactive-text);
-  --color-status-draft-bg: var(--status-draft-bg);
-  --color-status-draft-text: var(--status-draft-text);
+  --color-chart-students: var(--color-chart-students);
+  --color-chart-teachers: var(--color-chart-teachers);
+  --color-chart-attendance: var(--color-chart-attendance);
+  --color-chart-fees: var(--color-chart-fees);
+  --color-chart-events: var(--color-chart-events);
+  --color-chart-library: var(--color-chart-library);
 
-  --color-foreground: var(--foreground);
-
-  --font-display: var(--font-poppins);
+  --font-heading: var(--font-poppins);
   --font-sans: var(--font-inter);
 
   --radius-card: 12px;
@@ -86,24 +97,12 @@
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  background: var(--color-background);
+  color: var(--color-text);
+  font-family: var(--font-inter), Arial, Helvetica, sans-serif;
 }
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-display), var(--font-sans), sans-serif;
-}
-
-:focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: 2px;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
+  color: var(--color-heading);
+  font-family: var(--font-poppins), var(--font-inter), sans-serif;
 }
