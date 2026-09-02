@@ -15,6 +15,8 @@ export interface AuthUser {
   id: string;
   email: string;
   roles: Role[];
+  /** Flattened "resource:action" keys from all held roles. "*" means all (SUPER_ADMIN). */
+  permissions: string[];
   profileType: "STUDENT" | "TEACHER" | "STAFF" | "GUARDIAN" | null;
   profileId: string | null;
   accountStatus: AccountStatus;

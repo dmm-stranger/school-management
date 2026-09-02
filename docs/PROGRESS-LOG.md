@@ -105,13 +105,87 @@ Claude Project's knowledge so future chats pick up exactly where this left off.
 
 ---
 
-## Next Up — Phase 2: User Management
+## Phase 2 — User Management ✅ COMPLETE
 
-Per `06-user-management.md` + `28-roadmap.md`: User CRUD, Student/Teacher/Staff/Guardian
-profile creation flow (`Create User → Hash Password → Assign Role → Create Profile → Update
-User.profileId → Send Verification Email`), profile-type enforcement (one user, one profile),
-plus the frontend's role-based App Shell (Sidebar + Header + 10 dashboard shells) from
-`FRONTEND-WORKING-FLOW.md` §2.
+**Date:** 2026-08-30
 
-Relevant spec docs to re-read before starting: `06-user-management.md`,
-`school_erp_roles_and_dashboards.md`, `21-design-system.md`, `24-navigation-system.md`.
+### Backend (`school-erp-backend`)
+- **Models:** `Student`, `Teacher`, `Staff`, `Guardian` — with shared `personalInfo`/
+  `contactInfo` sub-schemas (`shared/profileSubSchemas.js`) reused across all three staff-like
+  profiles, per `06-user-management.md`. Guardian's `userId` is optional (record-only guardians
+  supported without portal access). Student's academic info is history-only — current class/
+  section is deliberately NOT stored here, it belongs to `StudentEnrollment` (Phase 5).
+- **`utils/idGenerator.util.js`**: atomic counter-based sequential ID generation
+  (`STU-2026-00001`, `EMP-T-2026-00001`, `EMP-S-2026-00001`) — race-condition safe via
+  `findByIdAndUpdate` + `$inc`.
+- **`modules/user/user.service.js`**: the reusable transactional core of the User Creation Flow
+  (`Create User → Hash Password → Assign Role → Create Profile → Update User.profileId → Send
+  Verification Email`), used identically by Student/Teacher/Staff/Guardian creation — implemented
+  with real MongoDB transactions (`withTransaction` helper) per `02-database-design.md` §3.4.
+- **Full CRUD** for all 4 profile modules + generic `/users` endpoints (list/get/update/delete +
+  self `/users/profile`), permission-gated via `resource:action` keys matching the Phase 1 RBAC
+  seed (`student:create`, `teacher:list`, `guardian:update`, etc.)
+- **`auth.service.js` `sanitizeUser`**: now returns a flattened `permissions: string[]` array
+  (`["*"]` for SUPER_ADMIN) so the frontend can resolve nav/UI visibility without guessing —
+  population depth fixed everywhere (`roleIds` → nested `permissions`) to support this.
+- **Verified:** full backend loads cleanly with all Phase 2 modules wired into `/api/v1`; all
+  routes confirmed registered correctly (`/students`, `/teachers`, `/staff`, `/guardians`,
+  `/users` — matching spec exactly, including Guardian having no DELETE route per spec).
+
+### Frontend (`school-erp-frontend`)
+- **`config/navigation.ts`**: single source of truth nav tree (per `24-navigation-system.md`
+  §66 — no per-role duplication), grouped by People/Academic/Operations/System, each item gated
+  by a `permission` or `roles` field.
+- **`hooks/useNavigation.ts`**: resolves visible nav items from the logged-in user's flattened
+  `permissions` — UX-visibility layer only, backend remains the real authority (per
+  `FRONTEND-WORKING-FLOW.md` §13).
+- **`components/layout/`**: `Sidebar` (collapsible, active-state aware), `Header` (search,
+  notifications, user menu), `MobileDrawer` (mobile nav per §25-27 of the nav spec),
+  `Breadcrumbs` (auto-derived from route segments), `AppShell` (ties them all together).
+- **`app/(dashboard)/layout.tsx`**: route-group layout — wraps every authenticated page in
+  `RequireAuth` + `AppShell` automatically, so individual pages don't repeat that boilerplate.
+- **10 role dashboards** (`/dashboard/admin`, `/principal`, `/teacher`, `/student`, `/guardian`,
+  `/accountant`, `/librarian`, `/staff`, `/receptionist`, `/sport-officer`) — all built on one
+  shared `RoleDashboard` component (per `FRONTEND-WORKING-FLOW.md` §6.3), each just passing its
+  own title/description/KPI set. `/dashboard` is a generic fallback that redirects to the
+  correct role-specific one.
+- **`/people/students`**: first real module list page — full list pattern from
+  `FRONTEND-WORKING-FLOW.md` §6.1 (debounced search, status filter chips with "Clear all",
+  skeleton loading, distinct empty vs error states with retry, pagination, avatar-initials,
+  `StatusBadge` using the design system's status color tokens).
+- **Verified:** `tsc --noEmit` clean, `eslint` clean (0 warnings), full production build
+  succeeds — all 20 routes compile.
+
+### Notable fixes made along the way
+- Role dashboard pages needed explicit `"use client"` — passing Lucide icon *components* as
+  props from a Server Component into a Client Component isn't allowed in Next.js App Router.
+- `KpiCard`'s icon type needed `style?: CSSProperties` added since dashboard cards color icons
+  dynamically from the chart-color tokens.
+- Two components triggered the `react-hooks/set-state-in-effect` lint rule (calling setState
+  synchronously as the first statement of a function invoked directly in a `useEffect` body) —
+  fixed in `AuthContext` via an in-effect async IIFE with a `cancelled` guard, and in the
+  Students page via deferring the initial fetch with `queueMicrotask`.
+
+### Not yet done (deliberately out of scope for Phase 2)
+- Student/Teacher/Staff/Guardian **create/edit forms** — only List + the service/API layer are
+  built; the "Add Student" button links to `/people/students/new`, which doesn't exist yet
+  (build this alongside Phase 3+ as the form patterns from `FRONTEND-WORKING-FLOW.md` §6.2 get
+  established, likely revisited once Campus/Academic exist since forms need class/section pickers)
+- Teacher/Staff/Guardian list pages — only Students list is built as the reference
+  implementation; the same pattern needs replicating for the other three
+  (`/people/teachers`, `/people/staff`, `/people/guardians`)
+- Dashboard KPI cards still show placeholder `"—"` values — real data wiring happens once the
+  relevant modules (attendance, finance, etc.) exist in later phases
+- Live end-to-end DB test still not run in this sandbox (network-restricted) — verify locally
+
+---
+
+## Next Up — Phase 3: Campus Management
+
+Per `07-campus-building-room.md` + `28-roadmap.md`: Campus → Building → Floor → Room hierarchy,
+room capacity/status tracking, and the frontend's Campus management UI (list + create/edit forms
+for each level). This also unblocks properly wiring the `academy` reference field already present
+on Student/Teacher/Staff (currently `null`-only placeholders).
+
+Relevant spec docs to re-read before starting: `07-campus-building-room.md`,
+`21-design-system.md` (form patterns), `30-forms-validation-ux.md`.
