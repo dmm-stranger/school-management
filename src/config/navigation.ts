@@ -65,6 +65,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { id: "academic-years", label: "Academic Years", path: "/academic/years", icon: Calendar, permission: "subject:list" },
       { id: "classes", label: "Classes", path: "/academic/classes", icon: Building2, permission: "subject:list" },
       { id: "subjects", label: "Subjects", path: "/academic/subjects", icon: BookOpen, permission: "subject:list" },
+      { id: "rooms", label: "Rooms & Buildings", path: "/academic/rooms", icon: Building2, permission: "room:list" },
       { id: "routine", label: "Routine", path: "/academic/routine", icon: Calendar, permission: "routine:list" },
     ],
   },

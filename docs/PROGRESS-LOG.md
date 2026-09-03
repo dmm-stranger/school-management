@@ -180,12 +180,109 @@ Claude Project's knowledge so future chats pick up exactly where this left off.
 
 ---
 
-## Next Up — Phase 3: Campus Management
+## Bugfix — "Schema hasn't been registered for model 'Permission'" (2026-09-02)
 
-Per `07-campus-building-room.md` + `28-roadmap.md`: Campus → Building → Floor → Room hierarchy,
-room capacity/status tracking, and the frontend's Campus management UI (list + create/edit forms
-for each level). This also unblocks properly wiring the `academy` reference field already present
-on Student/Teacher/Staff (currently `null`-only placeholders).
+**Symptom:** Login / `/auth/me` (and anything else populating `Role.permissions`) threw
+`Schema hasn't been registered for model "Permission". Use mongoose.model(name, schema)`.
 
-Relevant spec docs to re-read before starting: `07-campus-building-room.md`,
-`21-design-system.md` (form patterns), `30-forms-validation-ux.md`.
+**Root cause:** Mongoose only registers a schema when the file that calls `mongoose.model(name,
+schema)` is actually imported by the running process. `Permission`'s model file was only ever
+imported directly by the role/permission seed script — never by anything the live server
+actually loads — so when `Role.permissions` (a `ref: "Permission"`) got populated at runtime,
+there was no registered schema to resolve against. Any model reachable only via another
+schema's `ref` (not imported directly by a route/service) is at risk of this.
+
+**Fix:**
+- Added `src/database/models.registry.js` — imports every model file once, with a comment
+  explaining why this file exists and the instruction to add new models here going forward.
+- Imported the registry from **`src/database/connection.js`**, not just `server.js` — this is
+  the true chokepoint every entry point (server, seed scripts, future scripts/tests) already
+  passes through via `connectDatabase()`, so registration is guaranteed regardless of which
+  script initiates it. (`server.js` also imports it directly as a defense-in-depth belt-and-
+  suspenders measure, but `connection.js` is what actually closes the gap.)
+- Seed scripts also import the registry directly for clarity, though they're covered either way.
+
+**Verified:** reproduced the exact error in isolation (only importing `Role`, not `Permission`
+directly), confirmed the registry fixes it, and confirmed importing *only* `connection.js` (as
+any entry point would) is now sufficient to register all 11 models. Full app boot and frontend
+build re-verified clean after the fix.
+
+---
+
+## Phase 3 — Campus Management ✅ COMPLETE
+
+**Date:** 2026-09-03
+
+### Spec correction worth noting
+`07-campus-building-room.md` models this more flatly than "Campus → Building → Floor → Room"
+as four separate collections — there's a **single `academies` collection where each document
+IS one room** (fields: `buildingName`, `roomNumber`, `floor`, `roomType`, `status`, `capacity`,
+`description`, `facilities`, `relatedUsers`). Campus itself isn't a separate collection yet
+(spec: "Current Version: Single Campus... Future: Support Multiple Campuses"). Built exactly to
+this — no separate Campus/Building/Floor models invented.
+
+### Backend (`school-erp-backend`)
+- **`Academy` model** (`modules/academy/`) — all fields/enums exactly per spec: 2 buildings
+  (ACA-RED, ACA-GREEN), 4 floors, 16 room types, 5 statuses, 10 facilities. Room number format
+  enforced via regex (`RM01`–`RM70`). Unique index on `(buildingName, roomNumber)` per the
+  spec's uniqueness rule.
+- **Full CRUD** + the 3 spec-required aggregate endpoints: `GET /academies/buildings` (room
+  count + total capacity + floors per building), `GET /academies/floors` (room count per floor,
+  optionally scoped to a building), `GET /academies/rooms` (explicit alias of the main list).
+  **Route ordering verified**: static routes (`/buildings`, `/floors`, `/rooms`) registered
+  before `/:id` so they aren't swallowed as an `:id` param — confirmed via runtime route-stack
+  inspection, not just by inspection of the code.
+- **`room.seed.js`** — seeds all 70 rooms × 2 buildings from the spec's exact Classroom
+  Allocation / Principal Office / Teacher Rooms / Auditorium / Labs / Store Rooms / Finance
+  Rooms / Cafeteria / Mosque / Washrooms / Bathrooms tables, with sensible per-type capacity
+  defaults. Added as `yarn seed:rooms` (also runs as part of `yarn seed`).
+- **Bugfix along the way:** Student/Teacher/Staff models had a stale `ref: "Campus"` on their
+  `academy` field left over from Phase 2 (a model that was never actually built) — corrected to
+  `ref: "Academy"` to point at the model that actually exists now.
+- **Verified:** full backend boots cleanly with Academy wired into `/api/v1/academies`; route
+  ordering confirmed correct at runtime; seed script syntax-checked and its room-type values
+  cross-verified against the model's enum (13 types used, all valid).
+
+### Frontend (`school-erp-frontend`)
+- **`features/academy/`**: types mirroring every backend enum exactly (as `as const` tuples for
+  full autocomplete), typed API functions.
+- **New `components/ui/Select.tsx`** — first form `<select>` primitive, matching `Input`'s
+  label/error/hint/accessibility pattern (this will be reused by every future form).
+- **`/academic/rooms`**: list page — building/type/status filter dropdowns + debounced search,
+  same skeleton/empty/error states as the Students list.
+- **`/academic/rooms/new`**: the project's **first real create form** — validates on submit
+  (required fields, room-number regex, capacity > 0), maps backend field-level errors onto the
+  right inputs, facility multi-select as toggleable pills, redirects to the detail page on
+  success.
+- **`/academic/rooms/[id]`**: detail + inline edit — building/room number shown read-only
+  (immutable after creation), everything else editable, delete with an inline (not modal)
+  confirm-then-confirm pattern per the "destructive actions never one-click" UX rule.
+- **Nav**: added "Rooms & Buildings" under the Academic group, gated on `room:list`.
+- **Bugfix along the way:** `ApiClientError.errors` was typed as `string[]` but the backend
+  actually always returns `{field, message}[]` (per `validate.middleware.js`) — fixed the type
+  in `lib/api-client.ts` itself, which benefits every form built from here on, not just this one.
+- **Verified:** `tsc --noEmit` clean, `eslint` clean (0 warnings), full production build
+  succeeds — all 22 routes compile (20 static + 1 new dynamic `/academic/rooms/[id]`).
+
+### Not yet done (deliberately out of scope for Phase 3)
+- `relatedUsers` (assigning teachers/students to a room) has no UI yet — the field exists on the
+  model and is populated in API responses, but assignment happens once Teacher Assignment /
+  Student Enrollment (Phase 4/5) exist and there's a natural place to trigger it from
+- No capacity-vs-assignment enforcement yet ("routine generation must check room capacity" —
+  spec's rule, relevant once the Routine engine (Phase 5) exists)
+- Live end-to-end DB test still not run in this sandbox (network-restricted) — verify locally,
+  including running `yarn seed:rooms` and confirming rooms actually appear in the UI
+
+---
+
+## Next Up — Phase 4: Academic Structure
+
+Per `08-academic.md` + `09-subject.md` + `28-roadmap.md`: Academic Year → Class → Section →
+Group → Subject hierarchy — the backbone every other module (Attendance, Examination, Finance)
+depends on. This is the biggest remaining backend phase in terms of business-rule density
+(promotion flow, one-active-enrollment-per-year rule, etc.) — re-read `08-academic.md` and
+`11-student-enrollment.md` closely before starting rather than relying on the earlier summary in
+`BACKEND-WORKING-FLOW.md`.
+
+Relevant spec docs to re-read before starting: `08-academic.md`, `09-subject.md`,
+`10-teacher-assignment.md`, `11-student-enrollment.md`.

@@ -7,11 +7,17 @@ interface ApiResponse<T> {
   data: T;
 }
 
+export interface ApiFieldError {
+  field: string;
+  message: string;
+}
+
 class ApiClientError extends Error {
   statusCode: number;
-  errors: string[];
+  /** Field-level validation errors, per backend's validate.middleware.js / ApiError shape. */
+  errors: ApiFieldError[];
 
-  constructor(message: string, statusCode: number, errors: string[] = []) {
+  constructor(message: string, statusCode: number, errors: ApiFieldError[] = []) {
     super(message);
     this.statusCode = statusCode;
     this.errors = errors;
@@ -37,7 +43,7 @@ async function request<T>(
     throw new ApiClientError(
       json.message || "Request failed",
       res.status,
-      (json as unknown as { errors?: string[] }).errors || []
+      (json as unknown as { errors?: ApiFieldError[] }).errors || []
     );
   }
 

@@ -7,6 +7,12 @@ const STATUS_STYLES: Record<string, string> = {
   BLOCKED: "bg-[var(--color-status-inactive-bg)] text-[var(--color-status-inactive-text)]",
   GRADUATED: "bg-[var(--color-status-draft-bg)] text-[var(--color-status-draft-text)]",
   TRANSFERRED: "bg-[var(--color-status-draft-bg)] text-[var(--color-status-draft-text)]",
+  // Room statuses (07-campus-building-room.md)
+  AVAILABLE: "bg-[var(--color-status-active-bg)] text-[var(--color-status-active-text)]",
+  OCCUPIED: "bg-[var(--color-status-draft-bg)] text-[var(--color-status-draft-text)]",
+  RESERVED: "bg-[var(--color-status-pending-bg)] text-[var(--color-status-pending-text)]",
+  MAINTENANCE: "bg-[var(--color-status-pending-bg)] text-[var(--color-status-pending-text)]",
+  CLOSED: "bg-[var(--color-status-inactive-bg)] text-[var(--color-status-inactive-text)]",
 };
 
 export function StatusBadge({ status }: { status: string }) {
