@@ -275,14 +275,79 @@ this — no separate Campus/Building/Floor models invented.
 
 ---
 
-## Next Up — Phase 4: Academic Structure
+## Phase 4 — Academic Structure ✅ COMPLETE
 
-Per `08-academic.md` + `09-subject.md` + `28-roadmap.md`: Academic Year → Class → Section →
-Group → Subject hierarchy — the backbone every other module (Attendance, Examination, Finance)
-depends on. This is the biggest remaining backend phase in terms of business-rule density
-(promotion flow, one-active-enrollment-per-year rule, etc.) — re-read `08-academic.md` and
-`11-student-enrollment.md` closely before starting rather than relying on the earlier summary in
-`BACKEND-WORKING-FLOW.md`.
+**Date:** 2026-09-05
 
-Relevant spec docs to re-read before starting: `08-academic.md`, `09-subject.md`,
-`10-teacher-assignment.md`, `11-student-enrollment.md`.
+The densest phase so far — 4 interlocking specs with several hard business rules.
+
+### Backend (`school-erp-backend`)
+- **`AcademicYear`** — full CRUD, "only one ACTIVE at a time" enforced in the service (setting
+  a year ACTIVE auto-deactivates any other). Deleting the currently-ACTIVE year is blocked.
+- **`Class` / `Section` / `Group`** — modeled as **GET-only reference data** per spec (the spec
+  only lists GET endpoints for these — no POST/PATCH/DELETE — so they're seeded, not
+  admin-created via API). 12 classes (Class 0–10 + SSC), sections per class (A/B for Class 0–8,
+  A/B/C for Class 9–SSC, per spec), 3 global groups (Science/Commerce/Humanities).
+- **`Subject`** — full CRUD, unique subject codes, no duplicate subject name within the same
+  class, optional `group` ref (null = common/mandatory, set = group-specific — only meaningful
+  for Class 9/10/SSC). `GET /subjects/class/:classLevel` and `GET /subjects/group/:group`
+  convenience endpoints, registered before `/:id` to avoid route-order collisions.
+- **`TeacherAssignment`** — duplicate-assignment prevention (same teacher+class+section+subject+
+  year rejected with a clean 409, backed by a unique index too), **one class teacher per section**
+  rule enforced on both create and update, group-requirement validated against the target class's
+  `hasGroups` flag.
+- **`StudentEnrollment`** — the most rule-dense model: roll number unique per
+  (academicYear+class+section), **one ACTIVE enrollment per student per academic year**, section
+  capacity checked before enrolling, plus transactional **`POST /promote`** and **`POST
+  /transfer`** endpoints that create a new enrollment while marking the source as `PROMOTED` /
+  `TRANSFERRED` respectively — never deleting or overwriting historical enrollment data, per spec.
+- **RBAC seed updated**: added `academic`, `assignment`, `enrollment` as new permission
+  resources (previously these had no dedicated resource at all); wired into
+  PRINCIPAL/VICE_PRINCIPAL/TEACHER/STUDENT/GUARDIAN role permission sets appropriately.
+- **`academic-structure.seed.js`**: seeds all 12 classes, all sections, all 3 groups, and real
+  subject data for every class — Class 1–8 subject lists straight from spec; Class 9/10/SSC
+  split into common (10) + Science-specific (5) + Commerce-specific (3) + Humanities-specific (4)
+  subjects. **Spec discrepancy noted in code comments**: the spec labels this "Total Subjects: 23"
+  but only enumerates 22 — seeded the 22 actually listed rather than inventing a 23rd. The
+  common-vs-group split itself is a documented interpretation (standard NCTB curriculum
+  grouping), since the spec lists all 22 together without explicit per-subject group tags.
+- **Verified:** full backend boots cleanly with all 19 models registered; route ordering
+  confirmed correct at runtime across every new router; all Phase 4 Zod validation schemas
+  (date-range ordering, URL format, required-field combinations, promote/transfer payloads)
+  pass targeted tests.
+
+### Frontend (`school-erp-frontend`)
+- **`/academic/years`**: list + inline create form + "Set Active" action per row (no modal —
+  inline toggle, since it's a single low-risk state change).
+- **`/academic/classes`**: read-only browser — each class shown as a card with its seeded
+  sections and capacities; explicit empty-state message pointing at `yarn seed:academic` if
+  nothing's been seeded yet, since there's no create UI for this reference data by design.
+- **`/academic/subjects`**: list with class/group filter dropdowns + a create form whose Group
+  select is disabled and explains itself when the selected class doesn't use groups.
+- **Nav fix**: Academic Years/Classes nav items were still pointing at the stale `subject:list`
+  permission key from before `academic` existed as its own resource — corrected to `academic:list`.
+- **Verified:** `tsc --noEmit` clean, `eslint` clean (0 warnings), full production build
+  succeeds — all 25 routes compile.
+
+### Not yet done (deliberately out of scope for Phase 4)
+- **Teacher Assignment UI** and **Student Enrollment UI** (including the promote/transfer
+  flows) have no frontend yet — backend is fully built and testable via API, but the screens
+  are deferred to be built alongside Phase 5 (Routine), since assignment/enrollment pickers
+  naturally belong next to routine-building UI and it keeps this phase's frontend scope sane
+  (same pattern as deferring Teacher/Staff/Guardian list pages in Phase 2)
+- No edit/delete UI for Subjects yet (create + list only) — same reasoning, low-risk to defer
+- Live end-to-end DB test still not run in this sandbox (network-restricted) — verify locally,
+  including running `yarn seed:academic` and confirming classes/sections/subjects appear in the UI
+
+---
+
+## Next Up — Phase 5: Class Routine Engine
+
+Per `12-class-routine-engine.md` + `28-roadmap.md`: the routine/timetable generator — periods,
+day grid, teacher/room conflict detection, DRAFT → ACTIVE → LOCKED publish flow. This is also the
+natural place to finally build the deferred Teacher Assignment and Student Enrollment frontend
+screens, since routine-building needs to reference both directly.
+
+Relevant spec docs to re-read before starting: `12-class-routine-engine.md`, `10-teacher-
+assignment.md` (for the assignment-picker UI), `32-dashboard-ux.md` (routine grid is
+effectively a specialized dashboard/table view).
