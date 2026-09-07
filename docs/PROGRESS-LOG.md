@@ -341,13 +341,82 @@ The densest phase so far — 4 interlocking specs with several hard business rul
 
 ---
 
-## Next Up — Phase 5: Class Routine Engine
+## Phase 5 — Class Routine Engine ✅ COMPLETE
 
-Per `12-class-routine-engine.md` + `28-roadmap.md`: the routine/timetable generator — periods,
-day grid, teacher/room conflict detection, DRAFT → ACTIVE → LOCKED publish flow. This is also the
-natural place to finally build the deferred Teacher Assignment and Student Enrollment frontend
-screens, since routine-building needs to reference both directly.
+**Date:** 2026-09-06
 
-Relevant spec docs to re-read before starting: `12-class-routine-engine.md`, `10-teacher-
-assignment.md` (for the assignment-picker UI), `32-dashboard-ux.md` (routine grid is
-effectively a specialized dashboard/table view).
+The most algorithmically complex phase so far — conflict detection across 5 dimensions, a
+greedy auto-generator, and a DRAFT → ACTIVE → LOCKED publish workflow.
+
+### Backend (`school-erp-backend`)
+- **`Period`** — GET-only reference data (like Class/Section/Group), seeded with 10 slots (8
+  teaching periods + break + lunch) matching the spec's exact example timing.
+- **`ClassRoutine`** — all spec fields exactly (academicYear/class/section/group/day/period/
+  subject/teacher/room/startTime/endTime/status). Three compound unique indexes prevent
+  Duplicate Class Period, Teacher Conflict, and Room Conflict **at the database level**, not
+  just in application logic — a double-booking literally cannot be inserted.
+- **`classRoutine.conflicts.js`**: dedicated conflict-detection module implementing all 5
+  checks the spec requires before publishing (Teacher Conflict, Room Conflict, Duplicate Class
+  Period, Duplicate Subject Period, Invalid Assignment) — the first 3 are defensive re-checks
+  of what the indexes already prevent; Duplicate Subject Period and Invalid Assignment are
+  genuine cross-collection business rules the schema can't enforce on its own (a teacher must
+  hold an actual `TeacherAssignment` for the subject/class/section, and a room must not be
+  under maintenance/closed).
+- **Full CRUD** + **`POST /generate`** (auto-scheduler), **`POST /publish`** (blocks if
+  conflicts exist, moves DRAFT→ACTIVE), **`POST /lock`** / **`POST /unlock`** (bulk status
+  toggle per scope), plus `GET /class/:classId`, `/teacher/:teacherId`, `/room/:roomId`, and an
+  added-value `GET /conflicts` endpoint (not explicitly in the spec's API list, but directly
+  serves the spec's own "must detect conflicts" requirement as a reusable report).
+- **Lock enforcement**: `update`/`delete` both check `status !== "LOCKED"` before allowing any
+  change, per spec ("no modification allowed unless unlocked").
+- **Auto-generator** (`generateRoutine`): a documented, intentionally simple greedy scheduler —
+  for every active `TeacherAssignment` in the target class/section, places one weekly slot per
+  subject into the first day+period where the class, teacher, and a single caller-supplied room
+  are all free. The spec explicitly lists "AI Based Routine Generator" as **Future Scope**, so
+  this greedy v1 baseline is scoped correctly, not a placeholder mistake — documented as such
+  in code comments.
+- **RBAC**: no new resources needed — `routine` already existed from the original seed, and its
+  actions (`create/read/update/delete/list/publish/assign`) already covered every route.
+- **`period.seed.js`** added; `yarn seed` now runs it too.
+- **Verified:** full backend boots cleanly with all 21 models registered; route ordering
+  confirmed correct at runtime (`/generate`, `/publish`, `/lock`, `/unlock`, `/conflicts` all
+  registered before `/:id`); all Phase 5 Zod validation schemas pass targeted tests (time-format
+  regex, day enum, endTime-after-startTime).
+
+### Frontend (`school-erp-frontend`)
+- **Deferred-from-Phase-4 screens finally built**, since they belong naturally alongside
+  routine-building UI:
+  - **`/academic/assignments`**: list + create form (teacher/year/class/section/group/subject
+    pickers, group select auto-disables for non-grouped classes, class-teacher checkbox).
+  - **`/academic/enrollments`**: list + create form, plus **Promote**/**Transfer** actions per
+    row (modal with its own class/section/group/roll-number picker) — both explicitly message
+    "this creates a new enrollment; the current one is preserved as history" to match the
+    backend's non-destructive design.
+- **`/academic/routine`**: scope picker (year/class/section/group) → period × day grid, cells
+  color-coded by status (DRAFT/ACTIVE/LOCKED), room picker + Generate/Check Conflicts/Publish/
+  Lock/Unlock action bar, conflicts rendered as a readable list when found.
+- **New minimal `features/teacher/`**: a lightweight `teacherApi.list()` for dropdown use only
+  (full Teacher CRUD/detail pages remain a later phase, per the Phase 2 deferral — this just
+  unblocks the assignment/routine pickers that need to reference a teacher by name).
+- **Verified:** `tsc --noEmit` clean, `eslint` clean (0 warnings), full production build
+  succeeds — all 28 routes compile.
+
+### Not yet done (deliberately out of scope for Phase 5)
+- No edit UI for individual routine cells yet (generate/publish/lock act on a whole scope;
+  editing/deleting one specific period slot has no dedicated UI, only the underlying API)
+- Full Teacher/Staff/Guardian list+detail pages are still deferred (Phase 2's original
+  deferral) — the new `teacherApi.list()` is intentionally minimal, dropdown-only
+- Live end-to-end DB test still not run in this sandbox (network-restricted) — verify locally,
+  including running `yarn seed:periods` and generating a real routine end-to-end
+
+---
+
+## Next Up — Phase 6: Examination
+
+Per `13-exam-engine.md` + `28-roadmap.md`: Exam types, exam schedules (tied to Routine's rooms
+and the Academic structure), marks entry, grading/GPA calculation, results, and the
+publish-then-immutable rule for results. Routine and Teacher Assignment (Phase 5) are direct
+prerequisites this phase will reference.
+
+Relevant spec docs to re-read before starting: `13-exam-engine.md`, `20-report-system.md` (for
+transcript/report generation touchpoints).
