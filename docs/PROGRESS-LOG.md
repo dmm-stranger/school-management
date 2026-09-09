@@ -411,12 +411,79 @@ greedy auto-generator, and a DRAFT → ACTIVE → LOCKED publish workflow.
 
 ---
 
-## Next Up — Phase 6: Examination
+## Phase 6 — Examination ✅ COMPLETE
 
-Per `13-exam-engine.md` + `28-roadmap.md`: Exam types, exam schedules (tied to Routine's rooms
-and the Academic structure), marks entry, grading/GPA calculation, results, and the
-publish-then-immutable rule for results. Routine and Teacher Assignment (Phase 5) are direct
-prerequisites this phase will reference.
+**Date:** 2026-09-08
 
-Relevant spec docs to re-read before starting: `13-exam-engine.md`, `20-report-system.md` (for
-transcript/report generation touchpoints).
+### Spec interpretation worth noting
+The spec lists `grade`/`gpa` as required Result Fields but doesn't provide the actual grading
+table, and separately lists "Automatic GPA Calculation" under Future Scope (referring to a more
+advanced board-integrated system, not basic per-exam grading). To make Result generation
+actually functional now, implemented the standard Bangladesh NCTB percentage→grade/GPA scale
+(A+ 80%+ / A 70%+ / A- 60%+ / B 50%+ / C 40%+ / D 33%+ / F below) as a documented v1 baseline in
+`grading.util.js`, plus the standard "fail any subject → fail overall" rule. Both are explicit
+interpretations, not verbatim spec text — flagged in code comments.
+
+### Backend (`school-erp-backend`)
+- **`Exam`** — full CRUD; a PUBLISHED exam can only be archived, never edited/deleted, per spec.
+- **`ExamSchedule`** — duplicate-schedule prevention (one subject, one schedule, per exam/class/
+  section/group) plus **genuine time-overlap room-conflict detection** (not just exact-match —
+  correctly catches partially-overlapping slots of different lengths, verified with 5 targeted
+  overlap-logic tests). `passMarks ≤ fullMarks` enforced at both the Mongoose and Zod layers.
+- **`ExamInvigilator`** — nested under exam-schedules (`POST/DELETE .../invigilators`) since the
+  spec defines the collection and its fields but never lists a top-level API for it — a
+  documented gap-fill, not a spec deviation. Same time-overlap logic prevents a teacher being
+  double-booked as invigilator across two overlapping exams.
+- **`ExamMark`** — bounds-checked against the schedule's `fullMarks`, requires an ACTIVE
+  enrollment, blocked entirely while the schedule is still `DRAFT` (per spec's "must be
+  finalized" rule). Corrections **append an embedded revision entry** (previous value + who +
+  when + reason) rather than silently overwriting — satisfies the spec's "any correction must
+  create a new revision log" rule without standing up a separate top-level revision collection.
+  Added `POST /exam-marks/bulk` for whole-class entry in one request (not explicitly listed in
+  the spec's API section, but a direct, obvious need once you look at the actual UI workflow).
+- **`ExamResult`** — `generateResults` aggregates every mark a student has across all of an
+  exam's schedules for a class/section/(group), requires marks to be complete for all subjects
+  (skips + reports students with incomplete entry rather than silently guessing), computes
+  percentage/grade/GPA, and dense-ranks the cohort by obtained marks. `publishResults` locks all
+  DRAFT results to PUBLISHED and flips the parent Exam to PUBLISHED too — no update endpoint
+  exists after that point, matching the spec's immutability rule structurally (there's simply
+  nothing to call).
+- **RBAC**: no seed changes needed — `exam` and `result` resources already existed from the
+  original seed and already covered every action these routes needed.
+- **Verified:** full backend boots cleanly with all 26 models registered; route ordering
+  confirmed correct everywhere (`/bulk`, `/generate`, `/publish`, `/student/:id`,
+  `/:id/invigilators` all ahead of `/:id`); grading scale tested across all 7 bands plus boundary
+  conditions; time-overlap logic tested with 5 cases (adjacent-but-not-overlapping, fully
+  contained, identical ranges, etc.); all Zod validation schemas tested.
+
+### Frontend (`school-erp-frontend`)
+- **`/examination/exams`**: list + create form, links through to that exam's schedules.
+- **`/examination/schedules`**: list (filterable by exam, deep-linkable via `?examId=`) + create
+  form — class/section/group/subject cascading selects reuse the same pattern established in
+  Phase 5's assignment/enrollment forms.
+- **`/examination/marks`**: schedule picker → a real marks-entry grid (one row per student, one
+  number input per row, bulk-saves in a single request) rather than a one-student-at-a-time form
+  — this is the workflow a teacher would actually want.
+- **`/examination/results`**: generate/publish action panel (exam + class/section/group scope)
+  and a separate "view a student's results" lookup rendering the full grade/GPA/position table.
+- **Verified:** `tsc --noEmit` clean, `eslint` clean (0 warnings after fixing one unused-import
+  warning caught during review), full production build succeeds — all 32 routes compile.
+
+### Not yet done (deliberately out of scope for Phase 6)
+- No dedicated invigilator-assignment UI (the API exists and is wired for it; assigning
+  invigilators from the schedule list is a natural addition once schedule detail pages exist)
+- No transcript/report-card rendering yet — that's `20-report-system.md` territory, a later
+  phase, though `ExamResult` now has everything a transcript would need to pull from
+- Live end-to-end DB test still not run in this sandbox (network-restricted) — verify locally
+
+---
+
+## Next Up — Phase 7: Attendance
+
+Per `14-attendance.md` + `28-roadmap.md`: daily student/teacher/staff attendance marking,
+status flow (Draft → Submitted → Verified → Locked, mirroring the routine/exam lock patterns
+already established), daily/monthly/yearly summaries, and leave-approval auto-marking. Enrollment
+(Phase 4) and Routine (Phase 5) are direct prerequisites — attendance is taken per scheduled
+class period.
+
+Relevant spec docs to re-read before starting: `14-attendance.md`.

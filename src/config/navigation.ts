@@ -76,7 +76,10 @@ export const NAV_GROUPS: NavGroup[] = [
     label: "Operations",
     items: [
       { id: "attendance", label: "Attendance", path: "/attendance", icon: ClipboardCheck, permission: "attendance:list" },
-      { id: "examination", label: "Examination", path: "/examination", icon: FileText, permission: "exam:list" },
+      { id: "exams", label: "Exams", path: "/examination/exams", icon: FileText, permission: "exam:list" },
+      { id: "exam-schedules", label: "Exam Schedules", path: "/examination/schedules", icon: FileText, permission: "exam:list" },
+      { id: "exam-marks", label: "Marks Entry", path: "/examination/marks", icon: FileText, permission: "result:list" },
+      { id: "exam-results", label: "Results", path: "/examination/results", icon: FileText, permission: "result:read" },
       { id: "finance", label: "Finance", path: "/finance", icon: Wallet, permission: "finance:list" },
       { id: "library", label: "Library", path: "/library", icon: BookOpen, permission: "library:list" },
       { id: "transport", label: "Transport", path: "/transport", icon: Bus, permission: "transport:list" },
