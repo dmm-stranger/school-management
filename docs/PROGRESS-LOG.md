@@ -478,12 +478,69 @@ interpretations, not verbatim spec text — flagged in code comments.
 
 ---
 
-## Next Up — Phase 7: Attendance
+## Phase 7 — Attendance ✅ COMPLETE
 
-Per `14-attendance.md` + `28-roadmap.md`: daily student/teacher/staff attendance marking,
-status flow (Draft → Submitted → Verified → Locked, mirroring the routine/exam lock patterns
-already established), daily/monthly/yearly summaries, and leave-approval auto-marking. Enrollment
-(Phase 4) and Routine (Phase 5) are direct prerequisites — attendance is taken per scheduled
-class period.
+**Date:** 2026-09-10
 
-Relevant spec docs to re-read before starting: `14-attendance.md`.
+### Backend (`school-erp-backend`)
+- **`StudentAttendance` / `TeacherAttendance` / `StaffAttendance`** — one record per person per
+  day (unique index), Draft → Submitted → Verified → Locked status flow with lock enforcement on
+  update/delete, checkout-after-checkin validated at both the Mongoose and Zod layers. Student
+  attendance additionally requires an ACTIVE enrollment matching the class/section/year before
+  it can be marked.
+- **`POST /student-attendances/bulk`**: marks a whole class/section in one request — added
+  because the spec's own described workflow ("Select Class → Select Section → Mark Attendance →
+  Save") is clearly a whole-roster action, even though only singular CRUD endpoints were listed
+  explicitly; same gap-fill pattern as the exam-marks bulk endpoint in Phase 6.
+- **`attendance-summary` module**: daily/monthly/yearly summaries are **computed on read rather
+  than persisted** as a separate `attendanceSummaries` collection (which the spec's core
+  collections list does include). Documented as an explicit implementation choice: a
+  materialized summary can silently drift out of sync every time an underlying record is
+  corrected, while computing on demand is always accurate and cheap at this data scale. The same
+  daily/monthly/yearly summaries the spec calls for are still produced, just via aggregation.
+  Percentage calculation excludes HOLIDAY days from the denominator and counts HALF_DAY as 0.5
+  present — both documented interpretations, verified with targeted tests including a
+  divide-by-zero guard for all-holiday periods.
+- **Known gap, explicitly flagged**: "approved leave automatically marks attendance as LEAVE"
+  is not implemented — no Leave Request module exists anywhere in the project yet (it isn't part
+  of any phase built so far). This is a hook to wire in once a Leave module is built in a later
+  phase, not an oversight in this one.
+- **RBAC**: no seed changes needed — `attendance` resource already existed and already covered
+  every action these routes needed.
+- **Verified:** full backend boots cleanly with all 29 models registered; route ordering
+  confirmed correct everywhere (`/bulk` ahead of `/:id`, summary sub-routes all distinct); summary
+  percentage math tested (holiday exclusion, half-day weighting, divide-by-zero guard); all Zod
+  validation schemas tested (checkout-before-checkin rejection, invalid status enum rejection,
+  bulk payload acceptance).
+
+### Frontend (`school-erp-frontend`)
+- **`/attendance`**: the main daily workflow — year/class/section/group/date scope picker loads
+  the active roster (pre-filling any attendance already marked that day), a "mark all as…" bar
+  for the common case (whole class present), and per-student status pill-buttons for exceptions,
+  bulk-saving in one request.
+- **`/attendance/summary`**: student + year lookup rendering the yearly overview (big percentage,
+  status counts) plus a month-by-month breakdown table.
+- **Verified:** `tsc --noEmit` clean, `eslint` clean (0 warnings — fixed one
+  `react-hooks/exhaustive-deps` warning properly via `useCallback` rather than suppressing it),
+  full production build succeeds — all 34 routes compile.
+
+### Not yet done (deliberately out of scope for Phase 7)
+- No Teacher/Staff attendance marking UI yet — backend is fully built and identical in pattern
+  to Student attendance, but the UI is deferred since Teacher/Staff list/detail pages themselves
+  are still deferred from Phase 2
+- No class-level daily summary UI (the `GET /attendance-summary/class` endpoint exists and
+  works, just no page consumes it yet — student-level summary was prioritized as the more
+  immediately useful view)
+- Live end-to-end DB test still not run in this sandbox (network-restricted) — verify locally
+
+---
+
+## Next Up — Phase 8: Finance
+
+Per `15-finance.md` + `28-roadmap.md`: fee structures (per academic year/class/group), student
+fee/invoice generation, payment recording with atomic payment+transaction+receipt creation,
+discounts/scholarships, and salary payments. This is the first phase touching real money, so
+extra care on atomicity (transactions, per `02-database-design.md` §3.4) and the "financial
+records are never deleted, only adjusted" rule matters more here than anywhere so far.
+
+Relevant spec docs to re-read before starting: `15-finance.md`.

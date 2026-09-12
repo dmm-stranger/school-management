@@ -76,6 +76,7 @@ export const NAV_GROUPS: NavGroup[] = [
     label: "Operations",
     items: [
       { id: "attendance", label: "Attendance", path: "/attendance", icon: ClipboardCheck, permission: "attendance:list" },
+      { id: "attendance-summary", label: "Attendance Summary", path: "/attendance/summary", icon: ClipboardCheck, permission: "attendance:read" },
       { id: "exams", label: "Exams", path: "/examination/exams", icon: FileText, permission: "exam:list" },
       { id: "exam-schedules", label: "Exam Schedules", path: "/examination/schedules", icon: FileText, permission: "exam:list" },
       { id: "exam-marks", label: "Marks Entry", path: "/examination/marks", icon: FileText, permission: "result:list" },
