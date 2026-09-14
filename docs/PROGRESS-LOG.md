@@ -535,12 +535,91 @@ interpretations, not verbatim spec text — flagged in code comments.
 
 ---
 
-## Next Up — Phase 8: Finance
+## Phase 8 — Finance ✅ COMPLETE
 
-Per `15-finance.md` + `28-roadmap.md`: fee structures (per academic year/class/group), student
-fee/invoice generation, payment recording with atomic payment+transaction+receipt creation,
-discounts/scholarships, and salary payments. This is the first phase touching real money, so
-extra care on atomicity (transactions, per `02-database-design.md` §3.4) and the "financial
-records are never deleted, only adjusted" rule matters more here than anywhere so far.
+**Date:** 2026-09-13
 
-Relevant spec docs to re-read before starting: `15-finance.md`.
+The first phase touching real money — every write path was built around the spec's core rule:
+**financial records are never deleted, only adjusted**, and **every successful payment must
+atomically create a Payment + Transaction + Receipt**.
+
+### Backend (`school-erp-backend`)
+- **`FeeStructure`** — full CRUD, the *only* deletable record in this whole phase (it's a
+  template, not an executed financial transaction) — soft-deleted like everywhere else in the app.
+- **`StudentFee`** — validates the Fee Structure exists and the student holds an ACTIVE
+  enrollment before creating. **Auto-generates a DRAFT `Invoice`** in the same transaction as
+  creation (the spec defines an Invoice collection and a `GET /invoices/:invoiceNumber` lookup,
+  but no `POST /invoices` — auto-creating alongside StudentFee is the natural trigger point,
+  documented as a gap-fill). Corrections to discount/fine **append an adjustment entry**
+  (previous value + who + when + reason) rather than overwriting, mirroring the exam-mark
+  revision pattern from Phase 6.
+- **`Payment`** — the critical piece. `createPayment` runs inside a single MongoDB transaction
+  that creates the Payment, a `Transaction` (INCOME), and a `Receipt` (sequential `RCPT-YYYY-
+  NNNNN` number) together, then updates the parent `StudentFee`'s paid/due amounts and status,
+  and flips any linked DRAFT/SENT invoice to PAID once the fee is fully settled. Rejects any
+  payment amount exceeding the fee's current due amount. No update or delete endpoint exists for
+  Payment at all — matching the spec's immutability rule structurally, same as Exam Results in
+  Phase 6.
+- **`SalaryStructure`** (documented gap-fill, same reasoning as ExamInvigilator in Phase 6 — the
+  spec's API list only shows salary-*payments*, but without some record of an employee's agreed
+  salary there'd be nothing for a payment to reference) + **`SalaryPayment`** — applies the exact
+  same atomic Payment+Transaction+Receipt pattern, since a salary payment is a "successful
+  payment" in the same general sense the spec's Business Rules describe. One payment per
+  employee per month enforced via a unique index.
+- **`Expense`** — auto-creates an EXPENSE-type `Transaction` on creation. Categories modeled as
+  a fixed enum directly on the model rather than a separate `expenseCategories` collection +
+  CRUD, since the spec lists no dedicated API for categories and the example list reads as fixed
+  reference data — documented choice, not a spec deviation.
+- **`Transaction`** — read-only ledger (`GET /transactions`), populated internally by every
+  payment/expense flow above, never written to directly.
+- **`Receipt`** / **`Invoice`** — looked up by their human-readable sequential numbers
+  (`RCPT-2026-00001`, `INV-2026-00001`), not Mongo `_id`, exactly per spec.
+- **RBAC**: no seed changes needed — `finance` resource already existed and already covered
+  every action these 9 modules needed.
+- **Verified:** full backend boots cleanly with all 38 models registered; route ordering
+  confirmed correct everywhere; due-amount/status-transition math tested (fresh → partial →
+  paid, discount+fine combined, overpayment-rejection bound); net-salary formula tested; all
+  Zod validation schemas tested (negative-amount rejection, invalid YYYY-MM rejection, zero-
+  amount fee structure rejection).
+
+### Frontend (`school-erp-frontend`)
+- **`/finance/fee-structures`**: list + create form (year/class/group scoping, group select
+  auto-disables for non-grouped classes) + delete.
+- **`/finance/student-fees`**: the main day-to-day screen — assign a fee-structure to a student,
+  see amount/paid/due/status per row, and a **Record Payment** modal that pre-fills the full due
+  amount, validates client-side against it before submitting, and shows the backend's rejection
+  message inline if the amount still somehow exceeds due (defense in depth, not just trusting
+  the client check).
+- **`/finance/expenses`**: create form + running total card + list.
+- **Verified:** `tsc --noEmit` clean, `eslint` clean (0 warnings), full production build
+  succeeds — all 37 routes compile.
+
+### Not yet done (deliberately out of scope for Phase 8)
+- No Salary Structure/Payment UI yet — backend is fully built (including the atomic
+  payment+transaction+receipt flow, identical in pattern to student fee payments), but the
+  screens are deferred since they depend on a real employee-picker UI, which itself depends on
+  the still-deferred Teacher/Staff detail pages from Phase 2
+- No Receipt/Invoice lookup or print view yet — the `GET /receipts/:receiptNumber` and `GET
+  /invoices/:invoiceNumber` endpoints work, just no page consumes them yet
+- No Transactions ledger view (ledger data exists and is queryable, no page built)
+- Live end-to-end DB test still not run in this sandbox (network-restricted) — verify locally
+
+---
+
+## Next: Sample/Demo Data Seed Script
+
+Per explicit user request: build a `yarn seed:demo` script populating realistic data across
+everything built so far — enrolled students, teacher assignments, a generated+published routine,
+an exam with entered marks and published results, several days of attendance history, and sample
+fee/payment records — so the app is immediately explorable rather than empty after a fresh
+`yarn seed`. Keep this clearly separated from the structural seeds (roles/rooms/academic-
+structure/periods) so it can be wiped and re-run independently.
+
+---
+
+## Next Up — Phase 9: Library
+
+Per `16-library.md` + `28-roadmap.md`: book catalog, categories/authors/publishers, individually-
+tracked book copies, issue/return flow, and fine calculation for overdue books.
+
+Relevant spec docs to re-read before starting: `16-library.md`.
