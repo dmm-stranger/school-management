@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { GraduationCap, Search, Plus, AlertCircle } from "lucide-react";
-import { studentApi } from "@/features/student/student.api";
-import type { Student, StudentStatus } from "@/features/student/student.types";
+import { useStudents } from "@/features/student/student.queries";
+import type { StudentStatus } from "@/features/student/student.types";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Button } from "@/components/ui/Button";
 import { ApiClientError } from "@/lib/api-client";
@@ -36,45 +36,31 @@ function TableSkeleton() {
 }
 
 export default function StudentsListPage() {
-  const [students, setStudents] = useState<Student[]>([]);
-  const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, pages: 1 });
+  const [page, setPage] = useState(1);
   const [status, setStatus] = useState<StudentStatus | "">("");
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [loadState, setLoadState] = useState<"loading" | "loaded" | "error">("loading");
-  const [error, setError] = useState<string | null>(null);
 
-  // Debounce search input per FRONTEND-WORKING-FLOW.md §7 (race-condition protection)
+  // Debounce search input per FRONTEND-WORKING-FLOW.md §7 (race-condition protection).
+  // Resetting the page alongside it (inside the same deferred callback, not
+  // synchronously in the effect body) avoids the set-state-in-effect issue.
   useEffect(() => {
-    const timeout = setTimeout(() => setDebouncedSearch(search), 400);
+    const timeout = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 400);
     return () => clearTimeout(timeout);
   }, [search]);
 
-  const fetchStudents = useCallback(async (page: number) => {
-    setLoadState("loading");
-    setError(null);
-    try {
-      const result = await studentApi.list({
-        page,
-        limit: 20,
-        status: status || undefined,
-        search: debouncedSearch || undefined,
-      });
-      setStudents(result.data);
-      setPagination(result.pagination);
-      setLoadState("loaded");
-    } catch (err) {
-      setError(err instanceof ApiClientError ? err.message : "Failed to load students.");
-      setLoadState("error");
-    }
-  }, [status, debouncedSearch]);
+  const { data, isLoading, isError, error, refetch, isFetching } = useStudents({
+    page,
+    limit: 20,
+    status: status || undefined,
+    search: debouncedSearch || undefined,
+  });
 
-  useEffect(() => {
-    queueMicrotask(() => {
-      fetchStudents(1);
-    });
-  }, [fetchStudents]);
-
+  const students = data?.data ?? [];
+  const pagination = data?.pagination ?? { page: 1, limit: 20, total: 0, pages: 1 };
   const hasActiveFilters = status !== "" || debouncedSearch !== "";
 
   return (
@@ -109,7 +95,10 @@ export default function StudentsListPage() {
           {STATUS_FILTERS.map((f) => (
             <button
               key={f.value}
-              onClick={() => setStatus(f.value)}
+              onClick={() => {
+                setStatus(f.value);
+                setPage(1);
+              }}
               className={`rounded-[var(--radius-pill)] px-3 py-1.5 text-xs font-medium transition-colors ${
                 status === f.value
                   ? "bg-primary text-white"
@@ -126,6 +115,7 @@ export default function StudentsListPage() {
             onClick={() => {
               setStatus("");
               setSearch("");
+              setPage(1);
             }}
             className="text-xs font-medium text-primary hover:underline"
           >
@@ -135,20 +125,22 @@ export default function StudentsListPage() {
       </div>
 
       <div className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--color-border)] bg-surface">
-        {loadState === "loading" && <TableSkeleton />}
+        {isLoading && <TableSkeleton />}
 
-        {loadState === "error" && (
+        {isError && (
           <div className="flex flex-col items-center gap-3 px-6 py-16 text-center">
             <AlertCircle className="h-8 w-8 text-danger" />
             <p className="text-sm font-medium text-heading">Couldn&apos;t load students</p>
-            <p className="text-sm text-muted">{error}</p>
-            <Button variant="secondary" onClick={() => fetchStudents(pagination.page)}>
+            <p className="text-sm text-muted">
+              {error instanceof ApiClientError ? error.message : "Something went wrong."}
+            </p>
+            <Button variant="secondary" onClick={() => refetch()}>
               Retry
             </Button>
           </div>
         )}
 
-        {loadState === "loaded" && students.length === 0 && (
+        {!isLoading && !isError && students.length === 0 && (
           <div className="flex flex-col items-center gap-2 px-6 py-16 text-center">
             <GraduationCap className="h-8 w-8 text-[var(--color-muted-2)]" />
             <p className="text-sm font-medium text-heading">
@@ -162,7 +154,7 @@ export default function StudentsListPage() {
           </div>
         )}
 
-        {loadState === "loaded" && students.length > 0 && (
+        {!isLoading && !isError && students.length > 0 && (
           <>
             <table className="w-full text-sm">
               <thead>
@@ -174,7 +166,7 @@ export default function StudentsListPage() {
                   <th className="px-4 py-3">Joined</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[var(--color-border)]">
+              <tbody className={`divide-y divide-[var(--color-border)] ${isFetching ? "opacity-60" : ""}`}>
                 {students.map((student) => (
                   <tr key={student._id} className="hover:bg-[var(--color-surface-alt)]">
                     <td className="px-4 py-3">
@@ -207,17 +199,13 @@ export default function StudentsListPage() {
                 {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total}
               </p>
               <div className="flex gap-2">
-                <Button
-                  variant="secondary"
-                  disabled={pagination.page <= 1}
-                  onClick={() => fetchStudents(pagination.page - 1)}
-                >
+                <Button variant="secondary" disabled={pagination.page <= 1} onClick={() => setPage((p) => p - 1)}>
                   Previous
                 </Button>
                 <Button
                   variant="secondary"
                   disabled={pagination.page >= pagination.pages}
-                  onClick={() => fetchStudents(pagination.page + 1)}
+                  onClick={() => setPage((p) => p + 1)}
                 >
                   Next
                 </Button>

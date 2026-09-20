@@ -1,9 +1,12 @@
 "use client";
 
-import { useEffect, useState, useCallback, FormEvent } from "react";
+import { useState, FormEvent } from "react";
 import { Calendar, Plus, AlertCircle, X } from "lucide-react";
-import { academicYearApi } from "@/features/academic-year/academicYear.api";
-import type { AcademicYear } from "@/features/academic-year/academicYear.types";
+import {
+  useAcademicYears,
+  useCreateAcademicYear,
+  useUpdateAcademicYear,
+} from "@/features/academic-year/academicYear.queries";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -26,42 +29,23 @@ function ListSkeleton() {
 }
 
 export default function AcademicYearsPage() {
-  const [years, setYears] = useState<AcademicYear[]>([]);
-  const [loadState, setLoadState] = useState<"loading" | "loaded" | "error">("loading");
-  const [error, setError] = useState<string | null>(null);
+  const { data, isLoading, isError, error, refetch } = useAcademicYears();
+  const createYear = useCreateAcademicYear();
+  const activateYear = useUpdateAcademicYear();
+  const years = data?.data ?? [];
 
   const [showForm, setShowForm] = useState(false);
   const [year, setYear] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-  const [formError, setFormError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const fetchYears = useCallback(async () => {
-    setLoadState("loading");
-    try {
-      const result = await academicYearApi.list();
-      setYears(result.data);
-      setLoadState("loaded");
-    } catch (err) {
-      setError(err instanceof ApiClientError ? err.message : "Failed to load academic years.");
-      setLoadState("error");
-    }
-  }, []);
-
-  useEffect(() => {
-    queueMicrotask(() => {
-      fetchYears();
-    });
-  }, [fetchYears]);
 
   const resetForm = () => {
     setYear("");
     setStartDate("");
     setEndDate("");
     setFormErrors({});
-    setFormError(null);
+    createYear.reset();
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -76,27 +60,12 @@ export default function AcademicYearsPage() {
     setFormErrors(errs);
     if (Object.keys(errs).length > 0) return;
 
-    setIsSubmitting(true);
-    setFormError(null);
     try {
-      await academicYearApi.create({ year: year.trim(), startDate, endDate });
+      await createYear.mutateAsync({ year: year.trim(), startDate, endDate });
       resetForm();
       setShowForm(false);
-      fetchYears();
-    } catch (err) {
-      setFormError(err instanceof ApiClientError ? err.message : "Failed to create academic year.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleActivate = async (id: string) => {
-    try {
-      await academicYearApi.update(id, { status: "ACTIVE" });
-      fetchYears();
     } catch {
-      // surfaced via list refresh failing silently is acceptable here; a
-      // toast system will replace this once built (see FRONTEND-WORKING-FLOW §9)
+      // error surfaced via createYear.error below; form stays open
     }
   };
 
@@ -119,12 +88,14 @@ export default function AcademicYearsPage() {
           noValidate
           className="flex flex-col gap-4 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-surface p-6"
         >
-          {formError && (
+          {createYear.isError && (
             <div
               role="alert"
               className="rounded-[var(--radius-control)] bg-[var(--color-status-inactive-bg)] px-4 py-3 text-sm text-[var(--color-status-inactive-text)]"
             >
-              {formError}
+              {createYear.error instanceof ApiClientError
+                ? createYear.error.message
+                : "Failed to create academic year."}
             </div>
           )}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -154,28 +125,30 @@ export default function AcademicYearsPage() {
             />
           </div>
           <div className="flex justify-end">
-            <Button type="submit" isLoading={isSubmitting}>
-              {isSubmitting ? "Creating…" : "Create Academic Year"}
+            <Button type="submit" isLoading={createYear.isPending}>
+              {createYear.isPending ? "Creating…" : "Create Academic Year"}
             </Button>
           </div>
         </form>
       )}
 
       <div className="overflow-hidden rounded-[var(--radius-card)] border border-[var(--color-border)] bg-surface">
-        {loadState === "loading" && <ListSkeleton />}
+        {isLoading && <ListSkeleton />}
 
-        {loadState === "error" && (
+        {isError && (
           <div className="flex flex-col items-center gap-3 px-6 py-16 text-center">
             <AlertCircle className="h-8 w-8 text-danger" />
             <p className="text-sm font-medium text-heading">Couldn&apos;t load academic years</p>
-            <p className="text-sm text-muted">{error}</p>
-            <Button variant="secondary" onClick={fetchYears}>
+            <p className="text-sm text-muted">
+              {error instanceof ApiClientError ? error.message : "Something went wrong."}
+            </p>
+            <Button variant="secondary" onClick={() => refetch()}>
               Retry
             </Button>
           </div>
         )}
 
-        {loadState === "loaded" && years.length === 0 && (
+        {!isLoading && !isError && years.length === 0 && (
           <div className="flex flex-col items-center gap-2 px-6 py-16 text-center">
             <Calendar className="h-8 w-8 text-[var(--color-muted-2)]" />
             <p className="text-sm font-medium text-heading">No academic years yet</p>
@@ -183,7 +156,7 @@ export default function AcademicYearsPage() {
           </div>
         )}
 
-        {loadState === "loaded" && years.length > 0 && (
+        {!isLoading && !isError && years.length > 0 && (
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[var(--color-border)] text-left text-xs font-medium uppercase tracking-wide text-muted">
@@ -206,8 +179,9 @@ export default function AcademicYearsPage() {
                   <td className="px-4 py-3 text-right">
                     {y.status !== "ACTIVE" && (
                       <button
-                        onClick={() => handleActivate(y._id)}
-                        className="text-xs font-medium text-primary hover:underline"
+                        onClick={() => activateYear.mutate({ id: y._id, payload: { status: "ACTIVE" } })}
+                        disabled={activateYear.isPending}
+                        className="text-xs font-medium text-primary hover:underline disabled:opacity-50"
                       >
                         Set Active
                       </button>

@@ -615,11 +615,171 @@ fee/payment records — so the app is immediately explorable rather than empty a
 `yarn seed`. Keep this clearly separated from the structural seeds (roles/rooms/academic-
 structure/periods) so it can be wiped and re-run independently.
 
+## ✅ Demo Data Seed Script — COMPLETE
+
+**Date:** 2026-09-14
+
+Added `src/database/seed/demo-data.seed.js`, run via `yarn seed:demo` — deliberately **not**
+part of the main `yarn seed` chain, so structural setup and demo content stay independently
+re-runnable.
+
+**What it creates, all linked together (not isolated/orphaned records):**
+- 5 teachers, 3 staff, guardians, and 18 students (10 in Class 6 Section A, 8 in Class 9 Section
+  A / Science group) — every student created through the real transactional user-creation flow
+  from Phase 2, not a shortcut.
+- All 18 students **enrolled** (Phase 4) into their class/section/group with sequential roll
+  numbers.
+- 5 **teacher assignments** for Class 6-A (one subject each), with the first teacher marked as
+  Class Teacher.
+- A **routine generated and published** for Class 6-A via the actual auto-generator and
+  publish-with-conflict-check flow from Phase 5 (falls back to leaving it in DRAFT with a
+  warning if conflicts are detected, rather than force-publishing).
+- One **exam** ("Monthly Test - Demo") with 3 subject schedules, marks entered for all 10
+  Class 6-A students via the real bulk-marks endpoint (varied realistic scores, 55-94), then
+  **results generated and published** — so grade/GPA/rank are all visible immediately.
+- **10 school days of attendance** history for Class 6-A (skips Fridays, mostly PRESENT with a
+  few scripted ABSENT/LATE entries for realism) via the real bulk-attendance endpoint.
+- A **fee structure** assigned to all 10 Class 6-A students, with the first 6 paying in full,
+  the next 2 paying half (visible PARTIAL status), and the rest left PENDING — so every fee
+  status value is represented. Plus 2 sample expenses.
+
+**Idempotent by design**: every creation step checks for an existing matching record first and
+skips it if found, so `yarn seed:demo` can be run multiple times safely without duplicate-key
+errors or doubled-up data — useful if a later phase's seed needs re-running after this one.
+
+**Verified without a live database** (this sandbox has no MongoDB access): confirmed every
+import path and every service function name resolves correctly (the script runs cleanly up to
+the actual `mongoose.connect()` call, failing only on the expected "no MongoDB reachable"
+error) — this specifically catches the class of bug that broke past features silently (like the
+Permission model registration issue). Additionally, **all 15 payload shapes used in the script
+were independently tested against the real Zod validation schemas** for every module it touches
+(teacher, staff, guardian, student, assignment, enrollment, exam, schedule, marks, routine,
+attendance, fee structure, student fee, payment, expense) — every one parses successfully. Time-
+string formatting and the marks-generation formula were also bounds-checked (all scores land
+55-94, safely under the 100 fullMarks cap; all times are valid zero-padded HH:mm with end after
+start).
+
+**To use:**
+```bash
+yarn seed            # structural: roles, rooms, academic structure, periods, super admin
+yarn seed:demo        # realistic linked sample data across every module
+```
+Demo accounts use the password pattern `Teacher@123` / `Staff@123` / `Student@123`, emails like
+`teacher1@schoolerp.demo`, `student.c6.1@schoolerp.demo` — logged in `demo-data.seed.js` itself
+for reference.
+
+---
+
+## ✅ Frontend Server-State Infrastructure: TanStack Query — COMPLETE
+
+**Date:** 2026-09-15
+
+Per explicit user request, before starting Phase 9: every page up to this point managed API
+data with manual `useState` + `useEffect` + `fetch` + hand-rolled loading/error state — ~30+
+pages duplicating the same boilerplate, no caching, no automatic refetch after a mutation, no
+request deduping. **TanStack Query (`@tanstack/react-query` v5)** replaces this, and is now the
+standard pattern for every future page (starting with Phase 9).
+
+### What was built
+- **`src/lib/query-client.ts`**: central `QueryClient` config — 30s `staleTime` (avoids refetch
+  storms when the same reference data, e.g. the Class dropdown, is used across many forms),
+  5min `gcTime`, retry policy that never retries 4xx (retrying a validation error won't fix it)
+  but retries network/5xx up to twice, `refetchOnWindowFocus` on (self-heals stale data in an
+  admin tool left open all day).
+- **`src/features/query/QueryProvider.tsx`**: wraps the app, wired into `layout.tsx` as the
+  outermost provider (ahead of `AuthProvider`), so any component anywhere can use
+  `useQuery`/`useMutation`.
+- **`src/lib/query-keys.ts`**: one centralized factory for every cache key in the app — keeps
+  invalidation calls consistent and gives a single place to see everything that's cached.
+- **A `.queries.ts` hooks file added to all 16 feature modules that had an existing `.api.ts`**
+  (academic-year, subject, academy, student, teacher, teacher-assignment, student-enrollment,
+  routine, exam, exam-schedule, exam-mark, exam-result, student-attendance, attendance-summary,
+  fee-structure, student-fee, expense, academic-structure) — each exposes `useX()` /
+  `useCreateX()` / `useUpdateX()` / `useDeleteX()` hooks that wrap the existing `.api.ts`
+  functions (which are untouched — the HTTP layer didn't change, only how pages consume it) and
+  invalidate the right cache keys on success.
+
+### Reference-implementation pages converted (prove the pattern end-to-end)
+- **`/academic/years`** — simplest CRUD example (list + create + one-field update).
+- **`/people/students`** — the highest-traffic page in the app; demonstrates query-param-keyed
+  caching (page/status/search all become part of the cache key automatically) and
+  `isFetching`-driven UI (table dims slightly during background refetch instead of a full
+  loading-state flash).
+- **`/finance/fee-structures`** — demonstrates create + delete mutations together.
+
+**Bug caught and fixed during conversion**: the Students page's original filter-reset logic used
+a second `useEffect` that synchronously called `setPage(1)` — this is exactly the
+`react-hooks/set-state-in-effect` class of issue this project has hit and fixed several times
+before (AuthContext in Phase 1, the Students/Rooms list pages in Phase 2/3). Fixed the same way
+each time: moved the state update into the actual event handler (button `onClick`) or an already-
+deferred callback (`setTimeout`) instead of a bare synchronous effect body.
+
+### Deliberately not converted yet (migration plan, not a gap)
+The remaining ~30 pages (Rooms, Subjects, Classes, Teacher Assignments, Student Enrollments,
+Routine, all 4 Examination pages, Attendance + Summary, Student Fees, Expenses, all 10 role
+dashboards) **still use the old manual-fetch pattern** and work correctly as-is — this was a
+deliberate scope decision, not an oversight, for two reasons: (1) the three conversions above
+already prove every pattern needed (simple CRUD, paginated+filtered list, create+delete) so
+converting the rest is now mechanical, and (2) **every page built from Phase 9 onward will use
+TanStack Query from the start**, so the remaining older pages can be migrated opportunistically
+(e.g. whenever a page is touched for an unrelated reason) rather than as one large disruptive
+pass. If a dedicated migration pass is wanted instead, it's straightforward: each old page's
+`useState`+`useEffect`+`fetchX` block gets replaced with the matching hook from that module's
+new `.queries.ts` file, following the exact pattern in the 3 converted pages above.
+
+**Verified:** `tsc --noEmit` clean, `eslint` clean (0 warnings/errors after fixing the caught
+set-state-in-effect issue), full production build succeeds — all 37 routes compile with
+`QueryProvider` wired into the real (Poppins/Inter) font layout.
+
+---
+
+## 🐛 Critical Bugfix — Frontend showed no data anywhere after ~15 minutes
+
+**Date:** 2026-09-18
+
+**Symptom:** every page (old-pattern and TanStack-Query-converted alike) stopped showing any
+data — confirmed via browser DevTools Network tab: every API call was returning **401
+Unauthorized**, not a connectivity/CORS/empty-database issue.
+
+**Root cause:** the backend's access token cookie is intentionally short-lived (15 minutes, per
+`JWT_ACCESS_EXPIRY`) — it's meant to be silently renewed using the 7-day refresh token, not
+something the user re-enters. **The frontend never implemented that renewal.** `api-client.ts`
+had no handling for a 401 response at all, so exactly 15 minutes after login, every subsequent
+request failed and every page appeared empty — this was a real gap in Phase 1's auth work that
+went unnoticed because earlier testing/verification happened within a single 15-minute session.
+
+**Fix**, entirely in `src/lib/api-client.ts`:
+- On any 401 (except from `/auth/login`, `/auth/refresh-token`, `/auth/register` themselves, to
+  avoid loops), the client now calls `POST /auth/refresh-token` once, then **retries the original
+  request exactly once** with the new cookie.
+- **Deduplicated**: if several requests 401 at the same moment (e.g. a page firing multiple API
+  calls, exactly like the Rooms page in the bug report), they all share one in-flight refresh
+  call instead of each independently hitting `/auth/refresh-token` — verified with a standalone
+  concurrency simulation (3 concurrent 401s → exactly 1 refresh call).
+- If the refresh itself fails (refresh token also expired/invalid — a real 7-day-old session),
+  the user is redirected to `/login?redirect=<path>` with a full page reload (intentional — this
+  is a plain module, not a component, so `useRouter()` isn't available, and a full reload
+  correctly clears any stale in-memory state rather than leaving the old session's data lingering).
+
+This fix applies globally — every page, old-pattern or TanStack-Query-based, calls through
+`apiClient`, so this one change fixes the symptom everywhere at once with no per-page changes
+needed.
+
+**Verified:** `tsc --noEmit` clean, `eslint` clean (0 warnings after justifying the one legitimate
+`window.location` use with a comment), full production build succeeds (all 37 routes), and the
+deduplication logic specifically was verified with a standalone concurrency test.
+
+**Action for local testing:** if you were mid-session when this bug was hit, do a hard refresh /
+re-login once after pulling this update — the fix only applies going forward, it doesn't retroactively
+fix an already-expired session sitting in the browser.
+
 ---
 
 ## Next Up — Phase 9: Library
 
 Per `16-library.md` + `28-roadmap.md`: book catalog, categories/authors/publishers, individually-
-tracked book copies, issue/return flow, and fine calculation for overdue books.
+tracked book copies, issue/return flow, and fine calculation for overdue books. **Build this
+phase's frontend using the new TanStack Query hooks pattern from the start** (see the
+`.queries.ts` files added above for the pattern to follow), not the old manual-fetch pattern.
 
 Relevant spec docs to re-read before starting: `16-library.md`.
