@@ -13,6 +13,15 @@ const STATUS_STYLES: Record<string, string> = {
   RESERVED: "bg-[var(--color-status-pending-bg)] text-[var(--color-status-pending-text)]",
   MAINTENANCE: "bg-[var(--color-status-pending-bg)] text-[var(--color-status-pending-text)]",
   CLOSED: "bg-[var(--color-status-inactive-bg)] text-[var(--color-status-inactive-text)]",
+  // Library (Phase 9). Color is never the only signal — the label text always accompanies it.
+  ISSUED: "bg-[var(--color-status-draft-bg)] text-[var(--color-status-draft-text)]",
+  RETURNED: "bg-[var(--color-status-active-bg)] text-[var(--color-status-active-text)]",
+  OVERDUE: "bg-[var(--color-status-inactive-bg)] text-[var(--color-status-inactive-text)]",
+  LOST: "bg-[var(--color-status-inactive-bg)] text-[var(--color-status-inactive-text)]",
+  DAMAGED: "bg-[var(--color-status-pending-bg)] text-[var(--color-status-pending-text)]",
+  RETIRED: "bg-[var(--color-surface-alt)] text-muted",
+  PAID: "bg-[var(--color-status-active-bg)] text-[var(--color-status-active-text)]",
+  WAIVED: "bg-[var(--color-status-draft-bg)] text-[var(--color-status-draft-text)]",
 };
 
 export function StatusBadge({ status }: { status: string }) {

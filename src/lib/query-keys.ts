@@ -39,4 +39,19 @@ export const queryKeys = {
   feeStructures: { all: () => ["fee-structures"] as const },
   studentFees: { all: () => ["student-fees"] as const },
   expenses: { all: () => ["expenses"] as const },
+  // Everything library-related shares one root so a single invalidate(["library"]) after any
+  // circulation mutation (issue/return/fine) refreshes every dependent view — counts, lists, KPIs.
+  library: {
+    root: () => ["library"] as const,
+    lookups: (kind: string, params?: unknown) => ["library", "lookups", kind, params] as const,
+    books: (params?: unknown) => ["library", "books", params] as const,
+    book: (id: string) => ["library", "book", id] as const,
+    issues: (params?: unknown) => ["library", "issues", params] as const,
+    myIssues: (params?: unknown) => ["library", "my-issues", params] as const,
+    borrowers: (search: string) => ["library", "borrowers", search] as const,
+    borrowerStatus: (userId: string) => ["library", "borrower-status", userId] as const,
+    fines: (params?: unknown) => ["library", "fines", params] as const,
+    settings: () => ["library", "settings"] as const,
+    summary: () => ["library", "summary"] as const,
+  },
 };

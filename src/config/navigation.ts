@@ -84,7 +84,12 @@ export const NAV_GROUPS: NavGroup[] = [
       { id: "fee-structures", label: "Fee Structures", path: "/finance/fee-structures", icon: Wallet, permission: "finance:list" },
       { id: "student-fees", label: "Student Fees", path: "/finance/student-fees", icon: Wallet, permission: "finance:list" },
       { id: "expenses", label: "Expenses", path: "/finance/expenses", icon: Wallet, permission: "finance:list" },
+      // Flat sibling items, same pattern as Fee Structures / Student Fees / Expenses above —
+      // Sidebar.tsx does not render NavItem.children, so nesting these would hide them.
       { id: "library", label: "Library", path: "/library", icon: BookOpen, permission: "library:list" },
+      { id: "library-issues", label: "Issue / Return", path: "/library/issues", icon: BookOpen, permission: "library:create" },
+      { id: "library-fines", label: "Library Fines", path: "/library/fines", icon: BookOpen, permission: "library:list" },
+      { id: "library-my", label: "My Library", path: "/library/my", icon: BookOpen, permission: "library:read" },
       { id: "transport", label: "Transport", path: "/transport", icon: Bus, permission: "transport:list" },
       { id: "hostel", label: "Hostel", path: "/hostel", icon: Building2, permission: "hostel:list" },
     ],
