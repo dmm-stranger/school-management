@@ -54,4 +54,19 @@ export const queryKeys = {
     settings: () => ["library", "settings"] as const,
     summary: () => ["library", "summary"] as const,
   },
+  // One root per module (same convention as library) so a single invalidate after any
+  // circulation mutation (assign/end/pay) refreshes every dependent view.
+  transport: {
+    root: () => ["transport"] as const,
+    drivers: (params?: unknown) => ["transport", "drivers", params] as const,
+    vehicles: (params?: unknown) => ["transport", "vehicles", params] as const,
+    vehicle: (id: string) => ["transport", "vehicle", id] as const,
+    routes: (params?: unknown) => ["transport", "routes", params] as const,
+    route: (id: string) => ["transport", "route", id] as const,
+    stops: (routeId: string) => ["transport", "stops", routeId] as const,
+    assignments: (params?: unknown) => ["transport", "assignments", params] as const,
+    myAssignment: () => ["transport", "my-assignment"] as const,
+    fees: (params?: unknown) => ["transport", "fees", params] as const,
+    summary: () => ["transport", "summary"] as const,
+  },
 };

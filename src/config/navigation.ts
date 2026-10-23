@@ -90,7 +90,11 @@ export const NAV_GROUPS: NavGroup[] = [
       { id: "library-issues", label: "Issue / Return", path: "/library/issues", icon: BookOpen, permission: "library:create" },
       { id: "library-fines", label: "Library Fines", path: "/library/fines", icon: BookOpen, permission: "library:list" },
       { id: "library-my", label: "My Library", path: "/library/my", icon: BookOpen, permission: "library:read" },
+      // Flat sibling items, same pattern as Library above — Sidebar.tsx doesn't render NavItem.children.
       { id: "transport", label: "Transport", path: "/transport", icon: Bus, permission: "transport:list" },
+      { id: "transport-assignments", label: "Assign Students", path: "/transport/assignments", icon: Bus, permission: "transport:create" },
+      { id: "transport-fees", label: "Transport Fees", path: "/transport/fees", icon: Bus, permission: "transport:list" },
+      { id: "transport-my", label: "My Transport", path: "/transport/my", icon: Bus, permission: "transport:read" },
       { id: "hostel", label: "Hostel", path: "/hostel", icon: Building2, permission: "hostel:list" },
     ],
   },

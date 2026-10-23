@@ -22,6 +22,10 @@ const STATUS_STYLES: Record<string, string> = {
   RETIRED: "bg-[var(--color-surface-alt)] text-muted",
   PAID: "bg-[var(--color-status-active-bg)] text-[var(--color-status-active-text)]",
   WAIVED: "bg-[var(--color-status-draft-bg)] text-[var(--color-status-draft-text)]",
+  // Transport (Phase 10). MAINTENANCE already defined above, reused as-is for vehicles.
+  ENDED: "bg-[var(--color-surface-alt)] text-muted",
+  CANCELLED: "bg-[var(--color-status-inactive-bg)] text-[var(--color-status-inactive-text)]",
+  PARTIAL: "bg-[var(--color-status-pending-bg)] text-[var(--color-status-pending-text)]",
 };
 
 export function StatusBadge({ status }: { status: string }) {

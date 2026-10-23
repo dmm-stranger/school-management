@@ -3,10 +3,11 @@ import { queryKeys } from "@/lib/query-keys";
 import { studentApi } from "./student.api";
 import type { ListStudentsParams } from "./student.types";
 
-export const useStudents = (params: ListStudentsParams = {}) =>
+export const useStudents = (params: ListStudentsParams = {}, options: { enabled?: boolean } = {}) =>
   useQuery({
     queryKey: queryKeys.students.all(params),
     queryFn: () => studentApi.list(params),
+    enabled: options.enabled,
   });
 
 export const useStudent = (id: string) =>
