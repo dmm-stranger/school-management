@@ -69,4 +69,16 @@ export const queryKeys = {
     fees: (params?: unknown) => ["transport", "fees", params] as const,
     summary: () => ["transport", "summary"] as const,
   },
+  hostel: {
+    root: () => ["hostel"] as const,
+    hostels: (params?: unknown) => ["hostel", "hostels", params] as const,
+    hostel: (id: string) => ["hostel", "hostel", id] as const,
+    rooms: (hostelId: string) => ["hostel", "rooms", hostelId] as const,
+    room: (id: string) => ["hostel", "room", id] as const,
+    allocations: (params?: unknown) => ["hostel", "allocations", params] as const,
+    myAllocation: () => ["hostel", "my-allocation"] as const,
+    fees: (params?: unknown) => ["hostel", "fees", params] as const,
+    visitors: (params?: unknown) => ["hostel", "visitors", params] as const,
+    summary: () => ["hostel", "summary"] as const,
+  },
 };

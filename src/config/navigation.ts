@@ -95,7 +95,12 @@ export const NAV_GROUPS: NavGroup[] = [
       { id: "transport-assignments", label: "Assign Students", path: "/transport/assignments", icon: Bus, permission: "transport:create" },
       { id: "transport-fees", label: "Transport Fees", path: "/transport/fees", icon: Bus, permission: "transport:list" },
       { id: "transport-my", label: "My Transport", path: "/transport/my", icon: Bus, permission: "transport:read" },
+      // Flat sibling items, same pattern as Library and Transport above.
       { id: "hostel", label: "Hostel", path: "/hostel", icon: Building2, permission: "hostel:list" },
+      { id: "hostel-allocations", label: "Allocate Students", path: "/hostel/allocations", icon: Building2, permission: "hostel:create" },
+      { id: "hostel-fees", label: "Hostel Fees", path: "/hostel/fees", icon: Building2, permission: "hostel:list" },
+      { id: "hostel-visitors", label: "Visitor Log", path: "/hostel/visitors", icon: Building2, permission: "hostel:create" },
+      { id: "hostel-my", label: "My Hostel", path: "/hostel/my", icon: Building2, permission: "hostel:read" },
     ],
   },
   {
