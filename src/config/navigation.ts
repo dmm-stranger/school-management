@@ -107,8 +107,14 @@ export const NAV_GROUPS: NavGroup[] = [
     id: "system",
     label: "System",
     items: [
-      { id: "reports", label: "Reports", path: "/reports", icon: BarChart3, permission: "report:list" },
-      { id: "notifications", label: "Notifications", path: "/notifications", icon: Bell, permission: "notification:list" },
+      // report:read (not :list) — it is the key the backend gates the report endpoints on, and the one Sport Officer holds.
+      { id: "reports", label: "Reports", path: "/reports", icon: BarChart3, permission: "report:read" },
+      // /notifications is the inbox every account has (notification:read); the three below are
+      // manager tools. Flat siblings — Sidebar.tsx doesn't render NavItem.children.
+      { id: "notifications", label: "Notifications", path: "/notifications", icon: Bell, permission: "notification:read" },
+      { id: "notifications-compose", label: "Send Notification", path: "/notifications/compose", icon: Bell, permission: "notification:create" },
+      { id: "notifications-log", label: "Notification Log", path: "/notifications/manage", icon: Bell, permission: "notification:list" },
+      { id: "notifications-templates", label: "Notification Templates", path: "/notifications/templates", icon: Bell, permission: "notification:list" },
       { id: "settings", label: "Settings", path: "/settings", icon: Settings, permission: "settings:read" },
       { id: "security", label: "Security", path: "/security", icon: ShieldCheck, roles: ["SUPER_ADMIN", "ADMIN"] },
     ],

@@ -14,7 +14,7 @@ export function Sidebar({ collapsed }: SidebarProps) {
 
   return (
     <aside
-      className={`hidden md:flex h-screen flex-col border-r border-[var(--color-border)] bg-surface transition-all ${
+      className={`hidden md:flex print:hidden h-screen flex-col border-r border-[var(--color-border)] bg-surface transition-all ${
         collapsed ? "w-[72px]" : "w-64"
       }`}
     >

@@ -81,4 +81,19 @@ export const queryKeys = {
     visitors: (params?: unknown) => ["hostel", "visitors", params] as const,
     summary: () => ["hostel", "summary"] as const,
   },
+  notifications: {
+    root: () => ["notifications"] as const,
+    templates: (params?: unknown) => ["notifications", "templates", params] as const,
+    list: (params?: unknown) => ["notifications", "list", params] as const,
+    detail: (id: string) => ["notifications", "detail", id] as const,
+    mine: (params?: unknown) => ["notifications", "mine", params] as const,
+    unread: () => ["notifications", "unread-count"] as const,
+    summary: () => ["notifications", "summary"] as const,
+  },
+  reports: {
+    root: () => ["reports"] as const,
+    templates: () => ["reports", "templates"] as const,
+    history: () => ["reports", "history"] as const,
+    page: (id: string, page: number, limit: number) => ["reports", "page", id, page, limit] as const,
+  },
 };

@@ -26,6 +26,10 @@ const STATUS_STYLES: Record<string, string> = {
   ENDED: "bg-[var(--color-surface-alt)] text-muted",
   CANCELLED: "bg-[var(--color-status-inactive-bg)] text-[var(--color-status-inactive-text)]",
   PARTIAL: "bg-[var(--color-status-pending-bg)] text-[var(--color-status-pending-text)]",
+  // Notifications (Phase 12). PENDING reused for queued deliveries.
+  SENT: "bg-[var(--color-status-active-bg)] text-[var(--color-status-active-text)]",
+  FAILED: "bg-[var(--color-status-inactive-bg)] text-[var(--color-status-inactive-text)]",
+  DRAFT: "bg-[var(--color-status-draft-bg)] text-[var(--color-status-draft-text)]",
 };
 
 export function StatusBadge({ status }: { status: string }) {

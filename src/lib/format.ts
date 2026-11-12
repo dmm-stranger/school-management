@@ -7,3 +7,11 @@ export const formatDate = (iso?: string | null): string => {
 };
 
 export const formatMoney = (amount?: number | null): string => `৳${(amount ?? 0).toLocaleString()}`;
+
+/** Date + time, for records where the hour matters (notifications, visitor check-ins). */
+export const formatDateTime = (iso?: string | null): string => {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleString(undefined, { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+};

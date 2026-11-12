@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { Menu, Search, Bell, ChevronDown } from "lucide-react";
 import { useAuth } from "@/features/auth/AuthContext";
+import { useUnreadCount } from "@/features/notification/notification.queries";
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -12,6 +13,7 @@ interface HeaderProps {
 
 export function Header({ onToggleSidebar, onToggleMobileMenu }: HeaderProps) {
   const { user, logout } = useAuth();
+  const { data: unreadCount = 0 } = useUnreadCount();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -29,7 +31,7 @@ export function Header({ onToggleSidebar, onToggleMobileMenu }: HeaderProps) {
   const initials = user?.email?.slice(0, 2).toUpperCase() || "??";
 
   return (
-    <header className="flex h-16 shrink-0 items-center gap-3 border-b border-[var(--color-border)] bg-surface px-4">
+    <header className="flex h-16 shrink-0 items-center gap-3 border-b border-[var(--color-border)] bg-surface px-4 print:hidden">
       <button
         onClick={onToggleSidebar}
         className="hidden md:inline-flex rounded-[var(--radius-control)] p-2 text-muted hover:bg-[var(--color-surface-alt)]"
@@ -56,12 +58,21 @@ export function Header({ onToggleSidebar, onToggleMobileMenu }: HeaderProps) {
       </div>
 
       <div className="ml-auto flex items-center gap-2">
-        <button
+        <Link
+          href="/notifications"
           className="relative rounded-[var(--radius-control)] p-2 text-muted hover:bg-[var(--color-surface-alt)]"
-          aria-label="Notifications"
+          aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"}
         >
           <Bell className="h-5 w-5" />
-        </button>
+          {unreadCount > 0 && (
+            <span
+              aria-hidden="true"
+              className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[10px] font-semibold leading-none text-white"
+            >
+              {unreadCount > 99 ? "99+" : unreadCount}
+            </span>
+          )}
+        </Link>
 
         <div className="relative" ref={menuRef}>
           <button

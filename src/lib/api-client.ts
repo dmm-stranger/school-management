@@ -106,7 +106,41 @@ async function request<T>(
   return json.data;
 }
 
+/**
+ * Authenticated binary download (report exports). A plain <a href> can't be used: the access
+ * token is a short-lived cookie, and a bare navigation gets a 401 page instead of the silent
+ * refresh `request()` performs. This does the same refresh-once-and-retry, then hands back the
+ * file as a Blob. Errors arrive as JSON from the API, so they are parsed into an ApiClientError
+ * (e.g. the 410 "this report has expired" message) rather than saved as a corrupt file.
+ */
+async function download(endpoint: string, isRetry = false): Promise<{ blob: Blob; filename: string }> {
+  const res = await fetch(`${API_BASE_URL}${endpoint}`, { credentials: "include" });
+
+  if (res.status === 401 && !isRetry) {
+    if (await refreshAccessToken()) return download(endpoint, true);
+    redirectToLogin();
+  }
+
+  if (!res.ok) {
+    let message = "Download failed";
+    let errors: ApiFieldError[] = [];
+    try {
+      const json = await res.json();
+      message = json.message || message;
+      errors = json.errors || [];
+    } catch {
+      // body wasn't JSON — keep the generic message
+    }
+    throw new ApiClientError(message, res.status, errors);
+  }
+
+  const disposition = res.headers.get("Content-Disposition") ?? "";
+  const match = /filename="?([^";]+)"?/i.exec(disposition);
+  return { blob: await res.blob(), filename: match?.[1] ?? "download" };
+}
+
 export const apiClient = {
+  download,
   get: <T>(endpoint: string) => request<T>(endpoint, { method: "GET" }),
   post: <T>(endpoint: string, body?: unknown) =>
     request<T>(endpoint, { method: "POST", body: JSON.stringify(body) }),
